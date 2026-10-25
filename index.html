@@ -64,7 +64,8 @@ a{color:#6cb6ff}
 #main{display:flex;flex-direction:column;min-width:0;min-height:0}
 #chHead{height:48px;padding:0 14px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--panel);flex:none}
 #chHead b{font-size:16px}
-#netInfo{color:var(--dim);font-size:13px;margin-left:auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#netInfo{color:var(--dim);font-size:13px;margin-left:auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
+#netInfo:hover{color:var(--txt)}
 #menuBtn{display:none}
 #stage{display:flex;gap:8px;padding:8px;background:#000;flex-wrap:wrap;justify-content:center;max-height:55%;flex:none}
 .tile{position:relative;flex:1 1 320px;max-width:100%;background:#111;border-radius:8px;overflow:hidden;cursor:zoom-in;aspect-ratio:16/9}
@@ -180,7 +181,7 @@ label{font-size:13px;color:var(--dim);display:flex;flex-direction:column;gap:6px
   #app:not(.nav) #rail,#app:not(.nav) #side{transform:translateX(-340px)}
   #menuBtn{display:grid}
   #netInfo{display:none}
-  #chatToggle{margin-left:auto}
+  #netBtn{margin-left:auto}
   #body.sharing{flex-direction:column}
   #body.sharing #stage{flex:none;max-height:45%}
   #body.sharing #chat{flex:1 1 auto;border-left:0}
@@ -226,6 +227,7 @@ label{font-size:13px;color:var(--dim);display:flex;flex-direction:column;gap:6px
       <button class="ibtn" id="menuBtn">☰</button>
       <b id="chTitle"></b>
       <span id="netInfo"></span>
+      <button class="ibtn" id="netBtn" title="Bağlantı günlüğü · Connection log">🔌</button>
       <button class="ibtn hidden" id="chatToggle" title="Sohbeti gizle / göster (C)">💬</button>
     </div>
     <div id="body">
@@ -271,6 +273,18 @@ label{font-size:13px;color:var(--dim);display:flex;flex-direction:column;gap:6px
   </form>
 </div>
 
+<div id="netOver" class="over hidden">
+  <div class="card" style="width:min(560px,100%)">
+    <h2>Bağlantı günlüğü · Connection log</h2>
+    <p id="netHead"></p>
+    <pre id="netText" style="margin:0;max-height:50vh;overflow:auto;background:var(--panel);border-radius:8px;padding:10px;font-size:12px;white-space:pre-wrap"></pre>
+    <div style="display:flex;gap:8px">
+      <button class="btn" id="netRetry" style="flex:1">Yeniden bağlan · Reconnect</button>
+      <button class="btn ghost" id="netCopy">Kopyala · Copy</button>
+      <button class="btn ghost" id="netClose">Kapat</button>
+    </div>
+  </div>
+</div>
 <div id="callCard" class="hidden">
   <div id="callText"></div>
   <div class="row"><button class="btn" id="callJoin">Katıl · Join</button><button class="btn ghost" id="callLater">Sonra · Later</button></div>
@@ -418,7 +432,8 @@ async function relayPub(obj) {
 function hello() {
   if (Date.now() - lastHello < 20000) return;
   lastHello = Date.now();
-  relayPub({ t: "hello", from: me.peer });
+  nlog("Duyuru gönderildi (hello)");
+  relayPub({ t: "hello", from: me.peer, uid: me.uid, name: me.name, color: me.color });
 }
 async function relayEvent(ev) {
   if (ev.event !== "message") return;
@@ -431,10 +446,32 @@ async function relayEvent(ev) {
   try { o = await unseal(body); } catch { return; }  // başka anahtar / bozuk
   return o;
 }
+// ---------- Bağlantı günlüğü (🔌): nerede koptuğunu görmek için ----------
+const netLog = [];
+const short = (pid) => peers.get(pid)?.state.name || pid.slice(0, 4);
+function nlog(s) {
+  netLog.push(new Date().toLocaleTimeString("tr-TR") + "  " + s);
+  if (netLog.length > 80) netLog.shift();
+  if (!$("#netOver").classList.contains("hidden")) renderNetLog();
+}
+const candSummary = (sdp) => {
+  const n = { host: 0, srflx: 0, relay: 0 };
+  for (const m of sdp.matchAll(/ typ (host|srflx|relay)/g)) n[m[1]]++;
+  return `host ${n.host} · srflx ${n.srflx} · relay ${n.relay}`;
+};
+function renderNetLog() {
+  const turn = store.get("lonca_turn", null);
+  $("#netHead").textContent = `TURN: ${turn?.urls?.length ? "açık · on" : "YOK · off (davet bağlantısında t= olmalı)"} · bağlı ${readyPeers().length}, bağlanıyor ${peers.size - readyPeers().length}`;
+  $("#netText").textContent = netLog.join("\n") || "—";
+}
+
+let es = null;
 function relaySub() {
   // Yalnız canlı olaylar; eski posta ayrıca bir kez çekiliyor
-  const es = new EventSource(`${RELAY}${room.topic}/sse`);
-  es.onopen = () => hello();
+  es?.close();
+  es = new EventSource(`${RELAY}${room.topic}/sse`);
+  es.onopen = () => { nlog("Tanışma kanalı açık"); hello(); };
+  es.onerror = () => nlog("Tanışma kanalı koptu, tarayıcı yeniden deniyor");
   es.onmessage = async (e) => {
     let ev;
     try { ev = JSON.parse(e.data); } catch { return; }
@@ -454,28 +491,51 @@ async function pollMail() {
     ingest(mail);
   } catch (e) { console.warn("posta", e); }
 }
+// Doğrudan bağlanamayıp yalnız ntfy üzerinden yazışanlar da listede görünsün
+const relayOnly = new Map();   // uid -> { name, color, at }
+const RELAY_FRESH = 15 * 60000;
+function seenOnRelay(uid, name, color) {
+  if (!uid || uid === me.uid) return;
+  relayOnly.set(String(uid).slice(0, 20), { name: String(name || "?").slice(0, 32), color: okColor(color), at: Date.now() });
+  render();
+}
+const relayOnlyList = () => {
+  const linked = new Set(readyPeers().map((p) => p.state.uid));
+  return [...relayOnly].filter(([uid, r]) => !linked.has(uid) && Date.now() - r.at < RELAY_FRESH);
+};
+setInterval(() => { if (relayOnly.size) render(); }, 60000);
+
 function onRelay(o) {
-  if (o.t === "hello") onHello(o.from);
+  if (o.t === "hello") { seenOnRelay(o.uid, o.name, o.color); onHello(o.from); }
+  else if (o.t === "mail") seenOnRelay(o.m?.uid, o.m?.name, o.m?.color);
   else if (o.t === "hey" && o.to === me.peer) startOffer(o.from);
   else if (o.t === "sig" && o.to === me.peer) onSignal(o);
-  else if (o.t === "mail") ingest([o.m]);
+  if (o.t === "mail") ingest([o.m]);
 }
 
 // ---------- WebRTC eşleri ----------
 // Çakışma olmasın diye teklifi hep kimliği küçük olan yapar.
 function onHello(pid) {
+  nlog(`Biri geldi: ${pid.slice(0, 4)}`);
   if (peers.get(pid)?.ready) return;
   if (me.peer < pid) startOffer(pid);
   else relayPub({ t: "hey", from: me.peer, to: pid });
 }
+// Adaylar tek seferde gidiyor (trickle yok). Telefonda TURN adayı geç gelebiliyor:
+// TURN varsa relay adayı gelene kadar 9 sn'ye kadar bekle, yoksa 4 sn yeter.
 function iceDone(pc) {
   return new Promise((res) => {
-    if (pc.iceGatheringState === "complete") return res();
-    // TURN adayları birkaç saniye sürebiliyor
-    const t = setTimeout(res, 4000);
-    pc.addEventListener("icegatheringstatechange", () => {
-      if (pc.iceGatheringState === "complete") { clearTimeout(t); res(); }
-    });
+    const wantRelay = iceServers().some((s) => [].concat(s.urls).some((u) => /^turns?:/.test(u)));
+    const start = Date.now();
+    let hasRelay = false;
+    pc.addEventListener("icecandidate", (e) => { if (/ typ relay/.test(e.candidate?.candidate || "")) hasRelay = true; });
+    const iv = setInterval(() => {
+      const el = Date.now() - start;
+      if (pc.iceGatheringState === "complete" || (el > 4000 && (!wantRelay || hasRelay)) || el > 9000) {
+        clearInterval(iv);
+        res();
+      }
+    }, 250);
   });
 }
 function makePeer(pid) {
@@ -488,6 +548,15 @@ function makePeer(pid) {
   dc.bufferedAmountLowThreshold = 256 * 1024;
   dc.onopen = () => {
     p.ready = true;
+    // Hangi yoldan bağlandık: doğrudan mı, TURN aktarması mı
+    pc.getStats().then((st) => {
+      let pair, loc = {};
+      st.forEach((r) => {
+        if (r.type === "candidate-pair" && r.state === "succeeded" && (r.nominated || r.selected)) pair = r;
+        if (r.type === "local-candidate") loc[r.id] = r;
+      });
+      nlog(`${short(pid)} ile bağlantı kuruldu ✓ (${loc[pair?.localCandidateId]?.candidateType || "?"})`);
+    });
     // Sonraki görüşmeler (ses/ekran eklenince) veri kanalı üzerinden, ntfy'ye uğramadan
     pc.onnegotiationneeded = () => renegotiate(p);
     sendTo(p, { t: "state", ...myState() });
@@ -498,13 +567,15 @@ function makePeer(pid) {
   dc.onmessage = (e) => { p.queue = p.queue.then(() => onData(p, e.data)).catch((err) => console.warn(err)); };
   pc.onicecandidate = (e) => { if (e.candidate && p.ready) sendTo(p, { t: "ice", c: e.candidate }); };
   pc.ontrack = (e) => onTrack(p, e.track);
-  pc.onconnectionstatechange = () => { if (pc.connectionState === "failed") dropPeer(pid, p); };
-  setTimeout(() => { if (!p.ready) dropPeer(pid, p); }, 20000);
+  pc.oniceconnectionstatechange = () => nlog(`${short(pid)} ICE: ${pc.iceConnectionState}`);
+  pc.onconnectionstatechange = () => { if (pc.connectionState === "failed") dropPeer(pid, p, "bağlantı kurulamadı (failed)"); };
+  setTimeout(() => { if (!p.ready) dropPeer(pid, p, "30 sn içinde bağlanamadı"); }, 30000);
   return p;
 }
-function dropPeer(pid, only) {
+function dropPeer(pid, only, why) {
   const p = peers.get(pid);
   if (!p || (only && p !== only)) return;
+  nlog(`${short(pid)} düştü${why ? ": " + why : ""}`);
   peers.delete(pid);
   p.dc.onclose = null;
   try { p.pc.close(); } catch {}
@@ -520,18 +591,24 @@ async function startOffer(pid) {
   const p = makePeer(pid);
   await p.pc.setLocalDescription(await p.pc.createOffer());
   await iceDone(p.pc);
+  if (peers.get(pid) !== p) return;
+  nlog(`Teklif gönderildi → ${pid.slice(0, 4)} (${candSummary(p.pc.localDescription.sdp)})`);
   relayPub({ t: "sig", from: me.peer, to: pid, d: { type: "offer", sdp: p.pc.localDescription.sdp } });
 }
 async function onSignal(o) {
   if (o.d.type === "offer") {
     if (peers.get(o.from)?.ready) return;
+    nlog(`Teklif alındı ← ${o.from.slice(0, 4)} (${candSummary(o.d.sdp)})`);
     const p = makePeer(o.from);
     await p.pc.setRemoteDescription(o.d);
     await p.pc.setLocalDescription(await p.pc.createAnswer());
     await iceDone(p.pc);
+    if (peers.get(o.from) !== p) return;
+    nlog(`Cevap gönderildi → ${o.from.slice(0, 4)} (${candSummary(p.pc.localDescription.sdp)})`);
     relayPub({ t: "sig", from: me.peer, to: o.from, d: { type: "answer", sdp: p.pc.localDescription.sdp } });
   } else {
     const p = peers.get(o.from);
+    nlog(`Cevap alındı ← ${o.from.slice(0, 4)} (${candSummary(o.d.sdp)})`);
     if (p?.pc.signalingState === "have-local-offer") await p.pc.setRemoteDescription(o.d);
   }
 }
@@ -649,7 +726,8 @@ async function sendMsg(text, file) {
   broadcast({ t: "msgs", list: [m] });
   markSeen();
   // Kimse çevrimiçi değilse ntfy'de 12 saat bekletilir (dosyanın kendisi değil, sadece haberi)
-  if (!readyPeers().length) relayPub({ t: "mail", m });
+  // Kimse yoksa ya da doğrudan bağlanamadığımız biri varsa ntfy'den de gönder
+  if (!readyPeers().length || relayOnlyList().length) relayPub({ t: "mail", m });
   renderMessages(true);
   return m;
 }
@@ -846,7 +924,14 @@ function notify(fresh) {
   }
 }
 document.addEventListener("visibilitychange", () => {
-  if (!document.hidden) { unreadTitle = 0; document.title = "Lonca"; markSeen(); render(); }
+  if (document.hidden) return;
+  unreadTitle = 0;
+  document.title = "Lonca";
+  markSeen();
+  render();
+  // Telefonda uygulamadan çıkıp dönünce tanışma kanalı ölmüş olabiliyor
+  if (room && (!es || es.readyState === 2)) { nlog("Geri dönüldü, tanışma kanalı yeniden açılıyor"); relaySub(); }
+  else if (room && !readyPeers().length) { lastHello = 0; hello(); }
 });
 
 // ---------- Çizim ----------
@@ -876,18 +961,24 @@ function render() {
 
   // Üyeler
   const online = readyPeers();
-  let mem = `<div class="cat">Çevrimiçi — ${online.length + 1}</div>`;
+  const textOnly = relayOnlyList();
+  let mem = `<div class="cat">Çevrimiçi — ${online.length + textOnly.length + 1}</div>`;
   mem += member(me.name + " (sen)", me.color, voice.ch);
   for (const p of online) mem += member(p.state.name || "Bağlanıyor…", p.state.color, p.state.voice, p.id);
+  for (const [, r] of textOnly) {
+    mem += `<div class="mem" title="Doğrudan bağlantı kurulamadı; yazılar aktarıcıdan gidiyor, ses/ekran yok">${avatar(r.name, r.color, "md")}` +
+      `<div style="min-width:0"><div class="nm">${esc(r.name)}</div><small>📨 yalnız yazı · text only</small></div></div>`;
+  }
   $("#members").innerHTML = mem;
 
   $("#srvName").textContent = room.name;
   $("#chTitle").textContent = "# " + currentCh;
   $("#chatHeadCh").textContent = currentCh;
   $("#msgIn").placeholder = `#${currentCh} kanalına mesaj gönder`;
-  $("#netInfo").textContent = online.length
-    ? `${online.length} kişiye doğrudan bağlı`
-    : "Kimse çevrimiçi değil · mesajların 12 saat bekletilir";
+  const connecting = peers.size - online.length;
+  $("#netInfo").textContent = (online.length ? `${online.length} kişiye doğrudan bağlı`
+    : textOnly.length ? "Doğrudan bağlantı yok · yazılar aktarıcıdan gidiyor"
+    : "Kimse çevrimiçi değil · mesajların 12 saat bekletilir") + (connecting ? ` · ${connecting} bağlanıyor…` : "");
   $("#meAv").outerHTML = avatar(me.name, me.color, "md", "me").replace('class="av', 'id="meAv" class="av');
   $("#meName").textContent = me.name;
   $("#muteBtn").classList.toggle("off", voice.muted);
@@ -1064,6 +1155,17 @@ $("#rail").onclick = (e) => {
   if ("newsrv" in b.dataset) location.hash = "";
 };
 $("#menuBtn").onclick = () => $("#app").classList.toggle("nav");
+$("#netBtn").onclick = $("#netInfo").onclick = () => { renderNetLog(); $("#netOver").classList.remove("hidden"); };
+$("#netClose").onclick = () => $("#netOver").classList.add("hidden");
+$("#netRetry").onclick = () => {
+  if (!es || es.readyState === 2) relaySub();
+  lastHello = 0;
+  hello();
+  toast("Yeniden duyuruldu · Announced again");
+};
+$("#netCopy").onclick = async () => {
+  try { await navigator.clipboard.writeText($("#netHead").textContent + "\n" + netLog.join("\n")); toast("Kopyalandı · Copied"); } catch {}
+};
 
 // ---------- Sesli kanala çağırma ----------
 // Tarayıcı başkasının mikrofonunu izinsiz açtırmaz; karşıya "Katıl" kartı gider.
