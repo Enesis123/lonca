@@ -299,6 +299,8 @@ label{font-size:13px;color:var(--dim);display:flex;flex-direction:column;gap:6px
 // Tanışma (sinyal) ve çevrimdışı posta: ntfy.sh, AES-GCM şifreli; anahtar bağlantının # kısmında, sunucuya gitmez.
 // Asıl trafik (yazı, ses, ekran, dosya): tarayıcılar arası WebRTC, herkes herkese bağlı (mesh).
 
+// Her yayında artır: açık sayfalar yeni sürümü görüp kendini yeniler (GitHub Pages 10 dk önbellekliyor)
+const VERSION = "8";
 const RELAY = "https://ntfy.sh/";
 const STUN = [{ urls: ["stun:stun.l.google.com:19302", "stun:stun.cloudflare.com:3478"] }];
 const DEFAULT_TEXT = ["genel", "oyun", "medya"];
@@ -1351,7 +1353,8 @@ function showBig(html) {
 }
 $("#lightbox").onclick = () => $("#lightbox").classList.add("hidden");
 $("#inviteBtn").onclick = async () => {
-  const link = location.origin + location.pathname + "#" + linkHash(room) + turnParam();
+  // ?v= önbellekteki eski sürümün açılmasını engeller
+  const link = location.origin + location.pathname + "?v=" + VERSION + "#" + linkHash(room) + turnParam();
   try { await navigator.clipboard.writeText(link); toast("Davet bağlantısı kopyalandı — arkadaşlarına gönder"); }
   catch { prompt("Bu bağlantıyı arkadaşlarına gönder:", link); }
 };
@@ -1477,7 +1480,18 @@ function showLanding() {
     location.hash = linkHash({ key: rid(22), name });
   };
 }
+// Önbellekten eski sürüm geldiyse yenisini farklı adresle (?v=) aç
+async function checkVersion() {
+  if (location.protocol !== "https:" || voice.ch) return;  // konuşma ortasında yenileme yok
+  try {
+    const text = await (await fetch(location.pathname + "?t=" + Date.now(), { cache: "no-store" })).text();
+    const latest = text.match(/const VERSION = "([^"]+)"/)?.[1];
+    if (latest && latest !== VERSION) location.replace(location.pathname + "?v=" + latest + location.hash);
+  } catch {}
+}
 async function boot() {
+  checkVersion();
+  setInterval(checkVersion, 10 * 60000);
   await dbOpen();
   takeTurnParam();
   const p = new URLSearchParams(location.hash.slice(1));
