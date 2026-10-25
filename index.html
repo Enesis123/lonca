@@ -1,0 +1,1066 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#1b1c20">
+<title>Lonca</title>
+<style>
+:root{--rail:#1b1c20;--side:#24262b;--main:#2d2f35;--panel:#1f2024;--line:#383a41;--txt:#e7e7ea;--dim:#989aa3;--acc:#e8a33d;--acc2:#cf8c2a;--ok:#3ba55d;--bad:#ed4245;--hover:#33353b}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--main);color:var(--txt);font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;overflow:hidden}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;padding:0}
+input{font:inherit;color:var(--txt);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 12px;outline:none;width:100%}
+input:focus{border-color:var(--acc)}
+a{color:#6cb6ff}
+.hidden{display:none!important}
+
+/* Düzen: sunucu rayı | kanallar | sohbet | üyeler */
+#app{display:grid;grid-template-columns:72px 240px 1fr 220px;height:100dvh}
+#rail{background:var(--rail);display:flex;flex-direction:column;align-items:center;gap:8px;padding:12px 0;overflow-y:auto}
+.srv{width:48px;height:48px;border-radius:24px;background:var(--side);display:grid;place-items:center;font-weight:700;transition:border-radius .15s,background .15s;flex:none}
+.srv:hover,.srv.on{border-radius:15px;background:var(--acc);color:#1b1c20}
+.srv.add{color:var(--ok);font-size:24px}
+.srv.add:hover{background:var(--ok);color:#fff}
+.sep{width:32px;height:2px;background:var(--line);flex:none}
+
+#side{background:var(--side);display:flex;flex-direction:column;min-width:0}
+#srvHead{height:48px;padding:0 14px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--panel);font-weight:700;gap:8px}
+#srvHead span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pill{font-size:12px;font-weight:600;background:var(--acc);color:#1b1c20;border-radius:6px;padding:4px 8px;flex:none}
+#chans{flex:1;overflow-y:auto;padding:10px 8px}
+.cat{display:flex;justify-content:space-between;align-items:center;color:var(--dim);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;margin:14px 6px 4px}
+.cat button{color:var(--dim);font-size:18px;line-height:1}
+.cat button:hover{color:var(--txt)}
+.ch{display:flex;align-items:center;gap:6px;width:100%;padding:6px 8px;border-radius:6px;color:var(--dim);text-align:left}
+.ch:hover{background:var(--hover);color:var(--txt)}
+.ch.on{background:#3d4047;color:#fff}
+.ch.unread{color:#fff;font-weight:600}
+.ch.unread::after{content:"";width:8px;height:8px;border-radius:4px;background:#fff;margin-left:auto}
+.ch .ico{width:18px;text-align:center;opacity:.8}
+.vusers{margin:2px 0 4px 30px}
+.vu{display:flex;align-items:center;gap:7px;padding:3px 4px;color:var(--dim);font-size:14px}
+.vu .icons{margin-left:auto;font-size:12px}
+
+.av{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;font-weight:700;color:#1b1c20;flex:none;box-shadow:0 0 0 0 var(--ok);transition:box-shadow .1s}
+.av.sm{width:24px;height:24px;font-size:12px}
+.av.md{width:32px;height:32px;font-size:14px}
+.av.speak{box-shadow:0 0 0 3px var(--ok)}
+
+#voiceBar{border-top:1px solid var(--line);padding:8px 10px;background:var(--panel)}
+#voiceBar .st{color:var(--ok);font-weight:700;font-size:14px}
+#voiceBar .sub{color:var(--dim);font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#voiceBar .row{display:flex;gap:6px;margin-top:6px}
+.vbtn{flex:1;background:var(--hover);border-radius:6px;padding:6px 0;font-size:14px}
+.vbtn:hover{background:#40434a}
+.vbtn.on{background:var(--acc);color:#1b1c20}
+.vbtn.red:hover{background:var(--bad)}
+#mePanel{display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--panel)}
+#mePanel .nm{flex:1;min-width:0;font-weight:600;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ibtn{width:32px;height:32px;border-radius:6px;display:grid;place-items:center;font-size:16px;flex:none}
+.ibtn:hover{background:var(--hover)}
+.ibtn.off{color:var(--bad)}
+
+#main{display:flex;flex-direction:column;min-width:0;min-height:0}
+#chHead{height:48px;padding:0 14px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--panel);flex:none}
+#chHead b{font-size:16px}
+#netInfo{color:var(--dim);font-size:13px;margin-left:auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#menuBtn{display:none}
+#stage{display:flex;gap:8px;padding:8px;background:#000;flex-wrap:wrap;justify-content:center;max-height:55%;flex:none}
+.tile{position:relative;flex:1 1 320px;max-width:100%;background:#111;border-radius:8px;overflow:hidden;cursor:zoom-in;aspect-ratio:16/9}
+.tile video{width:100%;height:100%;object-fit:contain;display:block}
+.tile span{position:absolute;left:8px;bottom:8px;background:#000a;padding:2px 8px;border-radius:6px;font-size:13px}
+#msgs{flex:1;overflow-y:auto;padding:10px 0 4px}
+.msg{display:flex;gap:14px;padding:3px 16px;margin-top:12px}
+.msg.cont{margin-top:0;padding-left:70px}
+.msg:hover{background:#2a2c31}
+.msg .body{min-width:0;flex:1}
+.msg .hd{display:flex;gap:8px;align-items:baseline}
+.msg .hd b{font-weight:600}
+.msg time{color:var(--dim);font-size:12px}
+.txt{white-space:pre-wrap;word-wrap:break-word}
+.att{display:block;max-width:min(420px,100%);max-height:320px;border-radius:8px;margin-top:4px;cursor:zoom-in}
+.filecard{display:inline-flex;align-items:center;gap:10px;margin-top:4px;padding:10px 12px;border-radius:8px;background:var(--panel);border:1px solid var(--line);color:var(--txt);text-decoration:none;max-width:100%;text-align:left}
+.filecard span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.filecard small{color:var(--dim);white-space:nowrap}
+.day{display:flex;align-items:center;gap:10px;color:var(--dim);font-size:12px;margin:18px 16px 4px}
+.day::before,.day::after{content:"";flex:1;height:1px;background:var(--line)}
+.empty{color:var(--dim);padding:40px 16px;text-align:center}
+#typing{height:20px;padding:0 18px;color:var(--dim);font-size:13px;flex:none}
+#composer{display:flex;gap:8px;align-items:center;margin:0 16px 16px;background:#383a41;border-radius:10px;padding:4px 6px;flex:none}
+#composer input[type=text]{background:none;border:0;padding:10px 4px}
+#attachBtn{font-size:22px;width:36px;height:36px;color:var(--dim)}
+#attachBtn:hover{color:var(--txt)}
+
+#members{background:var(--side);overflow-y:auto;padding:14px 8px}
+.mem{display:flex;align-items:center;gap:10px;padding:6px 8px;border-radius:6px}
+.mem:hover{background:var(--hover)}
+.mem .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mem small{display:block;color:var(--dim);font-size:12px}
+.dot{position:relative}
+.dot::after{content:"";position:absolute;right:-2px;bottom:-2px;width:10px;height:10px;border-radius:50%;background:var(--ok);border:3px solid var(--side)}
+
+/* Açılış / pencereler */
+.over{position:fixed;inset:0;background:#000b;display:grid;place-items:center;z-index:20;padding:16px}
+.card{background:var(--side);border-radius:14px;padding:24px;width:min(420px,100%);display:flex;flex-direction:column;gap:12px}
+.card h2{margin:0}
+.card p{margin:0;color:var(--dim);font-size:14px}
+.btn{background:var(--acc);color:#1b1c20;font-weight:700;border-radius:8px;padding:11px}
+.btn:hover{background:var(--acc2)}
+.btn.ghost{background:var(--hover);color:var(--txt);font-weight:600}
+.colors{display:flex;gap:8px;flex-wrap:wrap}
+.colors button{width:30px;height:30px;border-radius:50%}
+.colors button.on{outline:3px solid #fff;outline-offset:2px}
+label{font-size:13px;color:var(--dim);display:flex;flex-direction:column;gap:6px}
+#landing{position:fixed;inset:0;display:grid;place-items:center;background:radial-gradient(circle at 30% 20%,#3a2f1d,#1b1c20 60%);padding:16px}
+#landing h1{margin:0;font-size:44px;color:var(--acc);letter-spacing:-.02em}
+#lightbox{cursor:zoom-out}
+#lightbox img,#lightbox video{max-width:96vw;max-height:94vh;border-radius:8px}
+#toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:#111;padding:10px 16px;border-radius:8px;z-index:30;box-shadow:0 6px 20px #0008}
+#dropHint{position:fixed;inset:0;background:#e8a33d33;border:4px dashed var(--acc);z-index:15;display:grid;place-items:center;font-size:24px;font-weight:700;pointer-events:none}
+
+@media (max-width:1000px){#app{grid-template-columns:72px 240px 1fr}#members{display:none}}
+@media (max-width:700px){
+  #app{grid-template-columns:1fr}
+  #rail,#side{position:fixed;top:0;bottom:0;z-index:10;transition:transform .2s}
+  #rail{left:0;width:72px}
+  #side{left:72px;width:min(260px,calc(100vw - 72px))}
+  #app:not(.nav) #rail,#app:not(.nav) #side{transform:translateX(-340px)}
+  #menuBtn{display:grid}
+  #netInfo{display:none}
+}
+</style>
+</head>
+<body>
+
+<div id="landing" class="hidden">
+  <div class="card">
+    <h1>Lonca</h1>
+    <p>Arkadaşlarınla yazılı, sesli ve ekran paylaşımlı sohbet. Sunucu yok: herkes birbirine doğrudan bağlanır, içerik şifrelidir.</p>
+    <label>Sunucunun adı<input id="newSrvName" maxlength="32" placeholder="ör. Kanka Loncası"></label>
+    <button class="btn" id="createSrv">Sunucu oluştur</button>
+    <p>Davet bağlantın varsa direkt onu aç; buraya gerek yok.</p>
+    <div id="savedSrvs"></div>
+  </div>
+</div>
+
+<div id="app" class="hidden">
+  <nav id="rail"></nav>
+  <aside id="side">
+    <div id="srvHead"><span id="srvName"></span><button class="pill" id="inviteBtn">Davet et</button></div>
+    <div id="chans"></div>
+    <div id="voiceBar" class="hidden">
+      <div class="st">🔊 Sesli bağlı</div>
+      <div class="sub" id="voiceWhere"></div>
+      <div class="row">
+        <button class="vbtn" id="screenBtn" title="Ekran paylaş">🖥️ Ekran</button>
+        <button class="vbtn red" id="leaveBtn" title="Ayrıl">📞 Ayrıl</button>
+      </div>
+    </div>
+    <div id="mePanel">
+      <div class="av md" id="meAv"></div>
+      <div class="nm" id="meName"></div>
+      <button class="ibtn" id="muteBtn" title="Mikrofonu kapat">🎙️</button>
+      <button class="ibtn" id="deafBtn" title="Sesi kapat">🎧</button>
+      <button class="ibtn" id="setBtn" title="Ayarlar">⚙️</button>
+    </div>
+  </aside>
+  <main id="main">
+    <div id="chHead">
+      <button class="ibtn" id="menuBtn">☰</button>
+      <b id="chTitle"></b>
+      <span id="netInfo"></span>
+    </div>
+    <div id="stage" class="hidden"></div>
+    <div id="msgs"></div>
+    <div id="typing"></div>
+    <form id="composer">
+      <button type="button" id="attachBtn" title="Dosya ekle">⊕</button>
+      <input type="text" id="msgIn" maxlength="4000" autocomplete="off">
+      <input type="file" id="fileIn" multiple hidden>
+    </form>
+  </main>
+  <aside id="members"></aside>
+</div>
+
+<div id="nameOver" class="over hidden">
+  <form class="card" id="nameForm">
+    <h2>Profilin</h2>
+    <label>Takma adın<input id="nameIn" maxlength="32" required></label>
+    <label>Rengin<div class="colors" id="colorPick"></div></label>
+    <details><summary style="color:var(--dim);font-size:13px;cursor:pointer">Gelişmiş: TURN sunucusu</summary>
+      <p style="margin:8px 0">Bazı mobil ağlarda doğrudan bağlantı kurulamaz; o durumda bir TURN sunucusu gerekir. Boş bırakabilirsin.</p>
+      <label>Adres<input id="turnUrl" placeholder="turn:ornek.com:3478"></label>
+      <label>Kullanıcı<input id="turnUser"></label>
+      <label>Parola<input id="turnPass" type="password"></label>
+    </details>
+    <button class="btn">Kaydet</button>
+    <button type="button" class="btn ghost hidden" id="leaveSrv">Bu sunucuyu listeden çıkar</button>
+  </form>
+</div>
+
+<div id="lightbox" class="over hidden"></div>
+<div id="toast" class="hidden"></div>
+<div id="dropHint" class="hidden">Bırak, gönderilsin</div>
+
+<script>
+"use strict";
+// Lonca — tek dosyalık, sunucusuz Discord benzeri.
+// Tanışma (sinyal) ve çevrimdışı posta: ntfy.sh, AES-GCM şifreli; anahtar bağlantının # kısmında, sunucuya gitmez.
+// Asıl trafik (yazı, ses, ekran, dosya): tarayıcılar arası WebRTC, herkes herkese bağlı (mesh).
+
+const RELAY = "https://ntfy.sh/";
+const STUN = [{ urls: ["stun:stun.l.google.com:19302", "stun:stun.cloudflare.com:3478"] }];
+const DEFAULT_TEXT = ["genel", "oyun", "medya"];
+const DEFAULT_VOICE = ["Sesli Sohbet", "Oyun Odası"];
+const COLORS = ["#e8a33d", "#f47b67", "#ed4245", "#eb459e", "#9b84ee", "#5865f2", "#45ddc0", "#3ba55d", "#fee75c", "#a3a6aa"];
+const CHUNK = 12000;                 // dosya parçası (bayt)
+const MAX_FILE = 50 * 1024 * 1024;
+const AUTO_IMG = 8 * 1024 * 1024;    // bu boyuta kadar resimler kendiliğinden indirilir
+const KEEP = 3000;                   // sunucu başına saklanan en fazla mesaj
+
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const rid = (n = 12) => Array.from(crypto.getRandomValues(new Uint8Array(n)), (b) => "abcdefghijklmnopqrstuvwxyz0123456789"[b % 36]).join("");
+const hex = (u8) => Array.from(u8, (b) => b.toString(16).padStart(2, "0")).join("");
+const store = {
+  get: (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } },
+  set: (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+};
+const fmtSize = (n) => n < 1024 ? n + " B" : n < 1048576 ? (n / 1024).toFixed(0) + " KB" : (n / 1048576).toFixed(1) + " MB";
+const fmtTime = (ts) => new Date(ts).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" });
+const dayKey = (ts) => new Date(ts).toDateString();
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+function toast(text) {
+  const t = $("#toast");
+  t.textContent = text;
+  t.classList.remove("hidden");
+  clearTimeout(toast.timer);
+  toast.timer = setTimeout(() => t.classList.add("hidden"), 2600);
+}
+
+// ---------- Şifreleme + sıkıştırma ----------
+function toB64(u8) {
+  let s = "";
+  for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000));
+  return btoa(s);
+}
+function fromB64(b) {
+  const s = atob(b), u = new Uint8Array(s.length);
+  for (let i = 0; i < s.length; i++) u[i] = s.charCodeAt(i);
+  return u;
+}
+const sha = async (str) => new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str)));
+const pipeBytes = async (data, stream) => new Uint8Array(await new Response(new Blob([data]).stream().pipeThrough(stream)).arrayBuffer());
+
+// SDP'ler 4 KB ntfy sınırına sığsın diye sıkıştırılıyor
+async function seal(obj) {
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const packed = await pipeBytes(JSON.stringify(obj), new CompressionStream("deflate-raw"));
+  const ct = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv }, room.aes, packed));
+  const out = new Uint8Array(12 + ct.length);
+  out.set(iv);
+  out.set(ct, 12);
+  return toB64(out);
+}
+async function unseal(b64) {
+  const raw = fromB64(b64);
+  const plain = await crypto.subtle.decrypt({ name: "AES-GCM", iv: raw.subarray(0, 12) }, room.aes, raw.subarray(12));
+  return JSON.parse(new TextDecoder().decode(await pipeBytes(plain, new DecompressionStream("deflate-raw"))));
+}
+
+// ---------- IndexedDB: mesajlar ve dosyalar ----------
+let db;
+function dbOpen() {
+  return new Promise((res, rej) => {
+    const r = indexedDB.open("lonca", 1);
+    r.onupgradeneeded = () => {
+      r.result.createObjectStore("msgs", { keyPath: "id" }).createIndex("room", "room");
+      r.result.createObjectStore("files", { keyPath: "id" });
+    };
+    r.onsuccess = () => res((db = r.result));
+    r.onerror = () => rej(r.error);
+  });
+}
+function dbDo(name, mode, fn) {
+  return new Promise((res, rej) => {
+    const tx = db.transaction(name, mode);
+    const req = fn(tx.objectStore(name));
+    tx.oncomplete = () => res(req?.result);
+    tx.onerror = () => rej(tx.error);
+  });
+}
+const dbPutAll = (name, list) => dbDo(name, "readwrite", (s) => { list.forEach((x) => s.put(x)); });
+const dbGet = (name, id) => dbDo(name, "readonly", (s) => s.get(id));
+
+// ---------- Durum ----------
+const me = { peer: rid(), ...store.get("lonca_me", { uid: rid(), name: "", color: COLORS[Math.floor(Math.random() * COLORS.length)] }) };
+let room = null;                 // { key, name, topic, aes }
+const peers = new Map();         // peerId -> bağlantı
+const msgs = new Map();          // id -> mesaj
+let currentCh = "genel";
+const voice = { ch: null, stream: null, muted: false, deaf: false, screen: null };
+const blobUrls = new Map();      // dosya id -> blob: adresi
+const fileStatus = new Map();    // dosya id -> checking | none | loading | missing
+const incoming = new Map();      // dosya id -> gelen parçalar
+const typing = new Map();        // peerId -> { ch, until }
+let lastSeen = {};
+let unreadTitle = 0;
+
+const iceServers = () => {
+  const t = store.get("lonca_turn", null);
+  return t?.urls ? [...STUN, t] : STUN;
+};
+const readyPeers = () => [...peers.values()].filter((p) => p.ready);
+const myState = () => ({ uid: me.uid, name: me.name, color: me.color, voice: voice.ch, muted: voice.muted, deaf: voice.deaf, screen: !!voice.screen });
+
+// ---------- ntfy: tanışma + çevrimdışı posta ----------
+let lastHello = 0;
+async function relayPub(obj) {
+  try { await fetch(RELAY + room.topic, { method: "POST", body: await seal(obj) }); }
+  catch (e) { console.warn("relay", e); }
+}
+function hello() {
+  if (Date.now() - lastHello < 20000) return;
+  lastHello = Date.now();
+  relayPub({ t: "hello", from: me.peer });
+}
+async function relayEvent(ev) {
+  if (ev.event !== "message") return;
+  let body = ev.message;
+  // 4 KB'ı aşan gövdeyi ntfy ek dosyaya çeviriyor
+  if (ev.attachment) {
+    try { body = await (await fetch(ev.attachment.url)).text(); } catch { return; }
+  }
+  let o;
+  try { o = await unseal(body); } catch { return; }  // başka anahtar / bozuk
+  return o;
+}
+function relaySub() {
+  // Yalnız canlı olaylar; eski posta ayrıca bir kez çekiliyor
+  const es = new EventSource(`${RELAY}${room.topic}/sse`);
+  es.onopen = () => hello();
+  es.onmessage = async (e) => {
+    let ev;
+    try { ev = JSON.parse(e.data); } catch { return; }
+    const o = await relayEvent(ev);
+    if (o && o.from !== me.peer) onRelay(o);
+  };
+}
+async function pollMail() {
+  try {
+    const text = await (await fetch(`${RELAY}${room.topic}/json?poll=1&since=12h`)).text();
+    const mail = [];
+    for (const line of text.split("\n")) {
+      if (!line.trim()) continue;
+      const o = await relayEvent(JSON.parse(line));
+      if (o?.t === "mail") mail.push(o.m);
+    }
+    ingest(mail);
+  } catch (e) { console.warn("posta", e); }
+}
+function onRelay(o) {
+  if (o.t === "hello") onHello(o.from);
+  else if (o.t === "hey" && o.to === me.peer) startOffer(o.from);
+  else if (o.t === "sig" && o.to === me.peer) onSignal(o);
+  else if (o.t === "mail") ingest([o.m]);
+}
+
+// ---------- WebRTC eşleri ----------
+// Çakışma olmasın diye teklifi hep kimliği küçük olan yapar.
+function onHello(pid) {
+  if (peers.get(pid)?.ready) return;
+  if (me.peer < pid) startOffer(pid);
+  else relayPub({ t: "hey", from: me.peer, to: pid });
+}
+function iceDone(pc) {
+  return new Promise((res) => {
+    if (pc.iceGatheringState === "complete") return res();
+    const t = setTimeout(res, 2500);
+    pc.addEventListener("icegatheringstatechange", () => {
+      if (pc.iceGatheringState === "complete") { clearTimeout(t); res(); }
+    });
+  });
+}
+function makePeer(pid) {
+  dropPeer(pid);
+  const pc = new RTCPeerConnection({ iceServers: iceServers() });
+  const dc = pc.createDataChannel("lonca", { negotiated: true, id: 0 });
+  const p = { id: pid, pc, dc, polite: me.peer > pid, makingOffer: false, ignoreOffer: false, ready: false,
+              state: {}, senders: {}, audioEl: null, videoStream: null, queue: Promise.resolve() };
+  peers.set(pid, p);
+  dc.bufferedAmountLowThreshold = 256 * 1024;
+  dc.onopen = () => {
+    p.ready = true;
+    // Sonraki görüşmeler (ses/ekran eklenince) veri kanalı üzerinden, ntfy'ye uğramadan
+    pc.onnegotiationneeded = () => renegotiate(p);
+    sendTo(p, { t: "state", ...myState() });
+    sendTo(p, { t: "sync", ids: [...msgs.keys()] });
+    render();
+  };
+  dc.onclose = () => dropPeer(pid, p);
+  dc.onmessage = (e) => { p.queue = p.queue.then(() => onData(p, e.data)).catch((err) => console.warn(err)); };
+  pc.onicecandidate = (e) => { if (e.candidate && p.ready) sendTo(p, { t: "ice", c: e.candidate }); };
+  pc.ontrack = (e) => onTrack(p, e.track);
+  pc.onconnectionstatechange = () => { if (pc.connectionState === "failed") dropPeer(pid, p); };
+  setTimeout(() => { if (!p.ready) dropPeer(pid, p); }, 20000);
+  return p;
+}
+function dropPeer(pid, only) {
+  const p = peers.get(pid);
+  if (!p || (only && p !== only)) return;
+  peers.delete(pid);
+  p.dc.onclose = null;
+  try { p.pc.close(); } catch {}
+  p.audioEl?.remove();
+  levels.delete(pid);
+  typing.delete(pid);
+  render();
+  // Herkesle bağ koptuysa (uyku, ağ değişimi) yeniden duyur
+  if (!readyPeers().length) setTimeout(hello, 3000);
+}
+async function startOffer(pid) {
+  if (peers.get(pid)?.ready) return;
+  const p = makePeer(pid);
+  await p.pc.setLocalDescription(await p.pc.createOffer());
+  await iceDone(p.pc);
+  relayPub({ t: "sig", from: me.peer, to: pid, d: { type: "offer", sdp: p.pc.localDescription.sdp } });
+}
+async function onSignal(o) {
+  if (o.d.type === "offer") {
+    if (peers.get(o.from)?.ready) return;
+    const p = makePeer(o.from);
+    await p.pc.setRemoteDescription(o.d);
+    await p.pc.setLocalDescription(await p.pc.createAnswer());
+    await iceDone(p.pc);
+    relayPub({ t: "sig", from: me.peer, to: o.from, d: { type: "answer", sdp: p.pc.localDescription.sdp } });
+  } else {
+    const p = peers.get(o.from);
+    if (p?.pc.signalingState === "have-local-offer") await p.pc.setRemoteDescription(o.d);
+  }
+}
+async function renegotiate(p) {
+  try {
+    p.makingOffer = true;
+    await p.pc.setLocalDescription();
+    sendTo(p, { t: "sdp", d: p.pc.localDescription });
+  } catch (e) { console.warn(e); }
+  finally { p.makingOffer = false; }
+}
+function sendTo(p, obj) {
+  if (p.dc.readyState === "open") p.dc.send(JSON.stringify(obj));
+}
+function broadcast(obj, except) {
+  for (const p of readyPeers()) if (p !== except) sendTo(p, obj);
+}
+function waitBuffer(dc) {
+  if (dc.bufferedAmount < 1024 * 1024) return;
+  return new Promise((r) => dc.addEventListener("bufferedamountlow", r, { once: true }));
+}
+
+async function onData(p, raw) {
+  let m;
+  try { m = JSON.parse(raw); } catch { return; }
+  switch (m.t) {
+    case "state":
+      p.state = { uid: String(m.uid).slice(0, 20), name: String(m.name || "?").slice(0, 32), color: okColor(m.color),
+                  voice: typeof m.voice === "string" ? m.voice.slice(0, 40) : null, muted: !!m.muted, deaf: !!m.deaf, screen: !!m.screen };
+      syncMedia(p);
+      render();
+      break;
+    case "sdp": {
+      // "Kibar eş" kalıbı: iki taraf aynı anda teklif ederse kibar olan geri çekilir
+      const d = m.d;
+      const collision = d.type === "offer" && (p.makingOffer || p.pc.signalingState !== "stable");
+      p.ignoreOffer = !p.polite && collision;
+      if (p.ignoreOffer) return;
+      await p.pc.setRemoteDescription(d);
+      if (d.type === "offer") {
+        await p.pc.setLocalDescription();
+        sendTo(p, { t: "sdp", d: p.pc.localDescription });
+      }
+      break;
+    }
+    case "ice":
+      try { await p.pc.addIceCandidate(m.c); } catch (e) { if (!p.ignoreOffer) console.warn(e); }
+      break;
+    case "sync": {
+      const have = new Set(m.ids);
+      const missing = [...msgs.values()].filter((x) => !have.has(x.id));
+      for (let i = 0; i < missing.length; i += 100) sendTo(p, { t: "msgs", list: missing.slice(i, i + 100) });
+      break;
+    }
+    case "msgs": {
+      const fresh = await ingest(m.list);
+      typing.delete(p.id);
+      // Herkes herkese bağlanamadıysa canlı mesajlar aradaki eş üzerinden yayılsın
+      if (fresh.length && fresh.length <= 20) broadcast({ t: "msgs", list: fresh }, p);
+      break;
+    }
+    case "typing":
+      typing.set(p.id, { ch: String(m.ch), until: Date.now() + 4000 });
+      renderTyping();
+      break;
+    case "bye":
+      dropPeer(p.id, p);
+      break;
+    case "fget": serveFile(p, m.id); break;
+    case "fno": nextSource(m.id); break;
+    case "fpart": gotPart(p, m); break;
+  }
+}
+
+// ---------- Mesajlar ----------
+const okColor = (c) => /^#[0-9a-f]{6}$/i.test(c) ? c : "#a3a6aa";
+const okId = (s) => typeof s === "string" && /^[a-z0-9]{6,40}$/.test(s);
+function clean(r) {
+  if (!r || !okId(r.id) || typeof r.ts !== "number") return null;
+  if (r.kind === "chan") {
+    const title = String(r.title || "").slice(0, 30).trim();
+    return title ? { id: r.id, kind: "chan", ts: r.ts, title, type: r.type === "voice" ? "voice" : "text" } : null;
+  }
+  if (r.kind !== "msg") return null;
+  const m = { id: r.id, kind: "msg", ts: r.ts, ch: String(r.ch).slice(0, 30), uid: String(r.uid).slice(0, 20),
+              name: String(r.name || "?").slice(0, 32), color: okColor(r.color), text: String(r.text || "").slice(0, 4000) };
+  if (r.file && okId(r.file.id)) {
+    m.file = { id: r.file.id, name: String(r.file.name || "dosya").slice(0, 200), size: Math.max(0, +r.file.size || 0),
+               mime: String(r.file.mime || "application/octet-stream").slice(0, 100) };
+  }
+  return m.text || m.file ? m : null;
+}
+async function ingest(list) {
+  const fresh = [];
+  for (const r of list || []) {
+    const m = clean(r);
+    if (m && !msgs.has(m.id)) { msgs.set(m.id, m); fresh.push(m); }
+  }
+  if (!fresh.length) return fresh;
+  await dbPutAll("msgs", fresh.map((m) => ({ ...m, room: room.topic })));
+  notify(fresh);
+  render();
+  if (fresh.some((m) => m.ch === currentCh || m.kind === "chan")) renderMessages();
+  return fresh;
+}
+async function sendMsg(text, file) {
+  const m = { id: rid(14), kind: "msg", ch: currentCh, ts: Date.now(), uid: me.uid, name: me.name, color: me.color, text };
+  if (file) m.file = file;
+  await ingest([m]);
+  broadcast({ t: "msgs", list: [m] });
+  markSeen();
+  // Kimse çevrimiçi değilse ntfy'de 12 saat bekletilir (dosyanın kendisi değil, sadece haberi)
+  if (!readyPeers().length) relayPub({ t: "mail", m });
+  renderMessages(true);
+}
+function addChannel(type) {
+  let title = prompt(type === "voice" ? "Sesli kanalın adı" : "Yazı kanalının adı");
+  if (!title) return;
+  title = title.trim().slice(0, 30);
+  if (type === "text") title = title.toLocaleLowerCase("tr").replace(/\s+/g, "-");
+  if (channels(type).includes(title)) return;
+  const c = { id: rid(14), kind: "chan", ts: Date.now(), title, type };
+  ingest([c]);
+  broadcast({ t: "msgs", list: [c] });
+}
+function channels(type) {
+  const extra = [...msgs.values()].filter((m) => m.kind === "chan" && m.type === type).sort((a, b) => a.ts - b.ts).map((m) => m.title);
+  return [...new Set([...(type === "voice" ? DEFAULT_VOICE : DEFAULT_TEXT), ...extra])];
+}
+
+// ---------- Dosyalar ----------
+async function sendFiles(files) {
+  for (const f of files) {
+    if (f.size > MAX_FILE) { toast(`${f.name}: 50 MB'tan büyük olamaz`); continue; }
+    const id = rid(14);
+    const name = f.name || "resim.png";
+    await dbPutAll("files", [{ id, blob: f, name, mime: f.type }]);
+    blobUrls.set(id, URL.createObjectURL(f));
+    await sendMsg("", { id, name, size: f.size, mime: f.type || "application/octet-stream" });
+  }
+}
+async function ensureFile(f) {
+  if (fileStatus.has(f.id) || blobUrls.has(f.id)) return;
+  fileStatus.set(f.id, "checking");
+  const rec = await dbGet("files", f.id);
+  if (rec) {
+    blobUrls.set(f.id, URL.createObjectURL(rec.blob));
+    fileStatus.delete(f.id);
+    renderMessages();
+  } else {
+    fileStatus.set(f.id, "none");
+    if (f.mime.startsWith("image/") && f.size <= AUTO_IMG) requestFile(f.id);
+    else renderMessages();
+  }
+}
+// Dosyayı sırayla eşlerden ister; 10 sn ses çıkmazsa sıradakine geçer
+function requestFile(id, tried = new Set()) {
+  const p = readyPeers().find((x) => !tried.has(x.id));
+  if (!p) { fileStatus.set(id, "missing"); incoming.delete(id); renderMessages(); return; }
+  tried.add(p.id);
+  const w = { from: p.id, parts: [], got: 0, n: 0, tried };
+  incoming.set(id, w);
+  fileStatus.set(id, "loading");
+  sendTo(p, { t: "fget", id });
+  renderMessages();
+  setTimeout(() => { if (incoming.get(id) === w && w.got === 0) requestFile(id, tried); }, 10000);
+}
+function nextSource(id) {
+  const w = incoming.get(id);
+  if (w) requestFile(id, w.tried);
+}
+async function serveFile(p, id) {
+  const rec = okId(id) && await dbGet("files", id);
+  if (!rec) return sendTo(p, { t: "fno", id });
+  const buf = new Uint8Array(await rec.blob.arrayBuffer());
+  const n = Math.max(1, Math.ceil(buf.length / CHUNK));
+  for (let i = 0; i < n; i++) {
+    if (p.dc.readyState !== "open") return;
+    await waitBuffer(p.dc);
+    sendTo(p, { t: "fpart", id, i, n, d: toB64(buf.subarray(i * CHUNK, (i + 1) * CHUNK)) });
+  }
+}
+async function gotPart(p, m) {
+  const w = incoming.get(m.id);
+  if (!w || w.from !== p.id || m.n * CHUNK > MAX_FILE + CHUNK) return;
+  w.n = m.n;
+  if (!w.parts[m.i]) { w.parts[m.i] = fromB64(m.d); w.got++; }
+  if (w.got < w.n) {
+    if (w.got % 15 === 0) renderMessages();
+    return;
+  }
+  incoming.delete(m.id);
+  const meta = [...msgs.values()].find((x) => x.file?.id === m.id)?.file;
+  const blob = new Blob(w.parts, { type: meta?.mime || "" });
+  await dbPutAll("files", [{ id: m.id, blob, name: meta?.name, mime: meta?.mime }]);
+  blobUrls.set(m.id, URL.createObjectURL(blob));
+  fileStatus.delete(m.id);
+  renderMessages();
+}
+
+// ---------- Ses ve ekran ----------
+const levels = new Map();   // "me" | peerId -> çözümleyici
+let actx;
+function watchLevel(key, stream) {
+  actx ??= new AudioContext();
+  actx.resume();
+  const an = actx.createAnalyser();
+  an.fftSize = 512;
+  actx.createMediaStreamSource(stream).connect(an);
+  levels.set(key, { an, buf: new Uint8Array(512), on: false });
+}
+setInterval(() => {
+  let changed = false;
+  for (const [key, l] of levels) {
+    l.an.getByteTimeDomainData(l.buf);
+    let sum = 0;
+    for (const v of l.buf) sum += (v - 128) * (v - 128);
+    const on = Math.sqrt(sum / l.buf.length) > 4 && !(key === "me" && voice.muted);
+    if (on !== l.on) { l.on = on; changed = true; }
+  }
+  if (changed) document.querySelectorAll("[data-spk]").forEach((el) => el.classList.toggle("speak", !!levels.get(el.dataset.spk)?.on));
+}, 120);
+
+async function joinVoice(ch) {
+  if (voice.ch === ch) return;
+  if (!voice.stream) {
+    try {
+      voice.stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+    } catch { return toast("Mikrofon izni alınamadı"); }
+    watchLevel("me", voice.stream);
+  }
+  voice.stream.getAudioTracks()[0].enabled = !voice.muted;
+  voice.ch = ch;
+  pushState();
+}
+function leaveVoice() {
+  stopScreen(false);
+  voice.stream?.getTracks().forEach((t) => t.stop());
+  voice.stream = null;
+  voice.ch = null;
+  levels.delete("me");
+  pushState();
+}
+async function toggleScreen() {
+  if (voice.screen) return stopScreen();
+  try { voice.screen = await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: 30 }, audio: false }); }
+  catch { return; }
+  voice.screen.getVideoTracks()[0].onended = () => stopScreen();
+  pushState();
+}
+function stopScreen(push = true) {
+  if (!voice.screen) return;
+  voice.screen.getTracks().forEach((t) => t.stop());
+  voice.screen = null;
+  if (push) pushState();
+}
+function pushState() {
+  broadcast({ t: "state", ...myState() });
+  readyPeers().forEach(syncMedia);
+  render();
+}
+// Yalnız aynı sesli kanaldakilere ses/görüntü gönderilir. Gönderici bir kez eklenir,
+// sonra replaceTrack ile açılıp kapanır — her seferinde yeniden görüşme gerekmez.
+function syncMedia(p) {
+  if (!p.ready) return;
+  const same = voice.ch && p.state.voice === voice.ch;
+  setSender(p, "audio", same ? voice.stream?.getAudioTracks()[0] : null);
+  setSender(p, "video", same ? voice.screen?.getVideoTracks()[0] : null);
+}
+function setSender(p, kind, track) {
+  const s = p.senders[kind];
+  if (!s) { if (track) p.senders[kind] = p.pc.addTrack(track); }
+  else if (s.track !== (track || null)) s.replaceTrack(track || null);
+}
+function onTrack(p, track) {
+  if (track.kind === "audio") {
+    if (!p.audioEl) {
+      p.audioEl = document.createElement("audio");
+      p.audioEl.autoplay = true;
+      document.body.append(p.audioEl);
+    }
+    p.audioEl.srcObject = new MediaStream([track]);
+    p.audioEl.muted = voice.deaf;
+    watchLevel(p.id, p.audioEl.srcObject);
+  } else {
+    p.videoStream = new MediaStream([track]);
+    renderStage();
+  }
+}
+
+// ---------- Bildirim / okunmamış ----------
+function markSeen() {
+  lastSeen[currentCh] = Date.now();
+  store.set("lonca_seen_" + room.topic, lastSeen);
+}
+function notify(fresh) {
+  const live = fresh.filter((m) => m.kind === "msg" && m.uid !== me.uid && Date.now() - m.ts < 60000);
+  if (!live.length) return;
+  if (!document.hidden && live.every((m) => m.ch === currentCh)) { markSeen(); return; }
+  if (document.hidden) {
+    unreadTitle += live.length;
+    document.title = `(${unreadTitle}) Lonca`;
+    if (window.Notification?.permission === "granted" && live.length <= 3) {
+      for (const m of live) new Notification(`${m.name} · #${m.ch}`, { body: m.text || "📎 " + m.file?.name, tag: m.id });
+    }
+  }
+}
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) { unreadTitle = 0; document.title = "Lonca"; markSeen(); render(); }
+});
+
+// ---------- Çizim ----------
+const initial = (n) => (n || "?").trim().charAt(0).toLocaleUpperCase("tr") || "?";
+const avatar = (name, color, cls = "", spk = "") =>
+  `<div class="av ${cls}" style="background:${okColor(color)}" ${spk ? `data-spk="${spk}"` : ""}>${esc(initial(name))}</div>`;
+
+function render() {
+  if (!room) return;
+  renderRail();
+  // Kanallar
+  const unread = (ch) => [...msgs.values()].some((m) => m.kind === "msg" && m.ch === ch && m.uid !== me.uid && m.ts > (lastSeen[ch] || 0));
+  let html = `<div class="cat">Yazı kanalları<button data-add="text" title="Kanal ekle">+</button></div>`;
+  for (const c of channels("text")) {
+    html += `<button class="ch ${c === currentCh ? "on" : ""} ${c !== currentCh && unread(c) ? "unread" : ""}" data-ch="${esc(c)}"><span class="ico">#</span>${esc(c)}</button>`;
+  }
+  html += `<div class="cat">Sesli kanallar<button data-add="voice" title="Kanal ekle">+</button></div>`;
+  for (const c of channels("voice")) {
+    html += `<button class="ch ${voice.ch === c ? "on" : ""}" data-voice="${esc(c)}"><span class="ico">🔊</span>${esc(c)}</button><div class="vusers">`;
+    if (voice.ch === c) html += voiceUser(me.name, me.color, "me", voice.muted, voice.deaf, !!voice.screen);
+    for (const p of readyPeers()) {
+      if (p.state.voice === c) html += voiceUser(p.state.name, p.state.color, p.id, p.state.muted, p.state.deaf, p.state.screen);
+    }
+    html += `</div>`;
+  }
+  $("#chans").innerHTML = html;
+
+  // Üyeler
+  const online = readyPeers();
+  let mem = `<div class="cat">Çevrimiçi — ${online.length + 1}</div>`;
+  mem += member(me.name + " (sen)", me.color, voice.ch);
+  for (const p of online) mem += member(p.state.name || "Bağlanıyor…", p.state.color, p.state.voice);
+  $("#members").innerHTML = mem;
+
+  $("#srvName").textContent = room.name;
+  $("#chTitle").textContent = "# " + currentCh;
+  $("#msgIn").placeholder = `#${currentCh} kanalına mesaj gönder`;
+  $("#netInfo").textContent = online.length
+    ? `${online.length} kişiye doğrudan bağlı`
+    : "Kimse çevrimiçi değil · mesajların 12 saat bekletilir";
+  $("#meAv").outerHTML = avatar(me.name, me.color, "md", "me").replace('class="av', 'id="meAv" class="av');
+  $("#meName").textContent = me.name;
+  $("#muteBtn").classList.toggle("off", voice.muted);
+  $("#muteBtn").textContent = voice.muted ? "🔇" : "🎙️";
+  $("#deafBtn").classList.toggle("off", voice.deaf);
+  $("#voiceBar").classList.toggle("hidden", !voice.ch);
+  $("#voiceWhere").textContent = voice.ch ? `${voice.ch} / ${room.name}` : "";
+  $("#screenBtn").classList.toggle("on", !!voice.screen);
+  $("#screenBtn").classList.toggle("hidden", !navigator.mediaDevices?.getDisplayMedia);
+  renderStage();
+  renderTyping();
+}
+function voiceUser(name, color, spk, muted, deaf, screen) {
+  return `<div class="vu">${avatar(name, color, "sm", spk)}<span>${esc(name)}</span><span class="icons">${screen ? "🖥️" : ""}${muted ? "🔇" : ""}${deaf ? "🎧" : ""}</span></div>`;
+}
+function member(name, color, inVoice) {
+  return `<div class="mem"><div class="dot">${avatar(name, color, "md")}</div><div style="min-width:0"><div class="nm">${esc(name)}</div>${inVoice ? `<small>🔊 ${esc(inVoice)}</small>` : ""}</div></div>`;
+}
+function renderRail() {
+  const list = store.get("lonca_servers", []);
+  $("#rail").innerHTML = list.map((s) =>
+    `<button class="srv ${s.key === room.key ? "on" : ""}" data-srv="${esc(s.key)}" title="${esc(s.name)}">${esc(initial(s.name))}</button>`
+  ).join("") + `<div class="sep"></div><button class="srv add" data-newsrv title="Yeni sunucu">+</button>`;
+}
+
+// Ekran yayınları: video öğeleri yeniden yaratılmasın diye elle eşleniyor
+const tiles = new Map();
+function renderStage() {
+  const want = new Map();
+  if (voice.ch) {
+    if (voice.screen) want.set("me", { stream: voice.screen, name: "Senin ekranın" });
+    for (const p of readyPeers()) {
+      if (p.state.voice === voice.ch && p.state.screen && p.videoStream) want.set(p.id, { stream: p.videoStream, name: p.state.name });
+    }
+  }
+  for (const [k, el] of tiles) if (!want.has(k)) { el.remove(); tiles.delete(k); }
+  for (const [k, t] of want) {
+    let el = tiles.get(k);
+    if (!el) {
+      el = document.createElement("div");
+      el.className = "tile";
+      el.innerHTML = `<video autoplay playsinline muted></video><span></span>`;
+      $("#stage").append(el);
+      tiles.set(k, el);
+    }
+    const v = el.querySelector("video");
+    if (v.srcObject !== t.stream) v.srcObject = t.stream;
+    el.querySelector("span").textContent = t.name;
+  }
+  $("#stage").classList.toggle("hidden", !tiles.size);
+}
+function renderTyping() {
+  const now = Date.now();
+  const names = readyPeers().filter((p) => typing.get(p.id)?.ch === currentCh && typing.get(p.id).until > now).map((p) => p.state.name);
+  $("#typing").textContent = names.length ? `${names.join(", ")} yazıyor…` : "";
+}
+setInterval(renderTyping, 1500);
+
+function renderMessages(toBottom) {
+  if (!room) return;
+  const box = $("#msgs");
+  const atBottom = toBottom || box.scrollHeight - box.scrollTop - box.clientHeight < 120;
+  const list = [...msgs.values()].filter((m) => m.kind === "msg" && m.ch === currentCh)
+    .sort((a, b) => a.ts - b.ts || (a.id < b.id ? -1 : 1)).slice(-300);
+  let html = "", prev = null;
+  for (const m of list) {
+    if (!prev || dayKey(prev.ts) !== dayKey(m.ts)) {
+      html += `<div class="day">${new Date(m.ts).toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" })}</div>`;
+      prev = null;
+    }
+    const content = (m.text ? `<div class="txt">${linkify(esc(m.text))}</div>` : "") + (m.file ? fileHtml(m.file) : "");
+    if (prev && prev.uid === m.uid && m.ts - prev.ts < 5 * 60000) {
+      html += `<div class="msg cont"><div class="body">${content}</div></div>`;
+    } else {
+      html += `<div class="msg">${avatar(m.name, m.color)}<div class="body"><div class="hd"><b style="color:${m.color}">${esc(m.name)}</b><time>${fmtTime(m.ts)}</time></div>${content}</div></div>`;
+    }
+    prev = m;
+  }
+  box.innerHTML = html || `<div class="empty"><h2>#${esc(currentCh)} kanalına hoş geldin</h2>Burası bu kanalın başlangıcı. İlk mesajı sen yaz!</div>`;
+  if (atBottom) box.scrollTop = box.scrollHeight;
+}
+const linkify = (s) => s.replace(/https?:\/\/[^\s<]+/g, (u) => `<a href="${u}" target="_blank" rel="noopener noreferrer">${u}</a>`);
+function fileHtml(f) {
+  const url = blobUrls.get(f.id);
+  const img = /^image\/(png|jpe?g|gif|webp|avif|heic)$/i.test(f.mime);
+  const vid = /^video\//.test(f.mime);
+  if (url && img) return `<img class="att" src="${url}" alt="${esc(f.name)}">`;
+  if (url && vid) return `<video class="att" src="${url}" controls playsinline></video>`;
+  if (url) return `<a class="filecard" href="${url}" download="${esc(f.name)}">📄 <span>${esc(f.name)}</span><small>${fmtSize(f.size)} · İndir</small></a>`;
+  ensureFile(f);
+  const st = fileStatus.get(f.id);
+  const w = incoming.get(f.id);
+  const label = st === "missing" ? "Şu an çevrimiçi kimsede yok · tekrar dene"
+    : st === "loading" ? `Alınıyor… ${w?.n ? Math.round((w.got / w.n) * 100) + "%" : ""}`
+    : "Almak için dokun";
+  return `<button class="filecard" data-get="${f.id}">${img ? "🖼️" : vid ? "🎞️" : "📄"} <span>${esc(f.name)}</span><small>${fmtSize(f.size)} · ${label}</small></button>`;
+}
+
+// ---------- Profil ----------
+function openProfile(first) {
+  $("#nameIn").value = me.name;
+  const turn = store.get("lonca_turn", {});
+  $("#turnUrl").value = turn.urls || "";
+  $("#turnUser").value = turn.username || "";
+  $("#turnPass").value = turn.credential || "";
+  $("#leaveSrv").classList.toggle("hidden", !!first);
+  $("#colorPick").innerHTML = COLORS.map((c) => `<button type="button" data-color="${c}" class="${c === me.color ? "on" : ""}" style="background:${c}"></button>`).join("");
+  $("#nameOver").classList.remove("hidden");
+  $("#nameIn").focus();
+}
+$("#colorPick").onclick = (e) => {
+  const c = e.target.dataset.color;
+  if (!c) return;
+  me.color = c;
+  $("#colorPick").querySelectorAll("button").forEach((b) => b.classList.toggle("on", b.dataset.color === c));
+};
+$("#nameForm").onsubmit = (e) => {
+  e.preventDefault();
+  me.name = $("#nameIn").value.trim().slice(0, 32) || "Gezgin";
+  store.set("lonca_me", { uid: me.uid, name: me.name, color: me.color });
+  const urls = $("#turnUrl").value.trim();
+  store.set("lonca_turn", urls ? { urls, username: $("#turnUser").value, credential: $("#turnPass").value } : null);
+  $("#nameOver").classList.add("hidden");
+  if (room) pushState();
+};
+$("#leaveSrv").onclick = () => {
+  if (!confirm(`"${room.name}" listeden çıkarılsın mı? Mesaj geçmişi bu cihazda kalır.`)) return;
+  store.set("lonca_servers", store.get("lonca_servers", []).filter((s) => s.key !== room.key));
+  location.hash = "";
+};
+
+// ---------- Olaylar ----------
+$("#chans").onclick = (e) => {
+  const b = e.target.closest("button");
+  if (!b) return;
+  if (b.dataset.add) return addChannel(b.dataset.add);
+  if (b.dataset.ch) {
+    currentCh = b.dataset.ch;
+    markSeen();
+    $("#app").classList.remove("nav");
+    render();
+    renderMessages(true);
+  }
+  if (b.dataset.voice) joinVoice(b.dataset.voice);
+};
+$("#rail").onclick = (e) => {
+  const b = e.target.closest("button");
+  if (!b) return;
+  if (b.dataset.srv) {
+    const s = store.get("lonca_servers", []).find((x) => x.key === b.dataset.srv);
+    if (s && s.key !== room.key) location.hash = linkHash(s);
+  }
+  if ("newsrv" in b.dataset) location.hash = "";
+};
+$("#menuBtn").onclick = () => $("#app").classList.toggle("nav");
+$("#msgs").onclick = (e) => {
+  const get = e.target.closest("[data-get]");
+  if (get) {
+    if (fileStatus.get(get.dataset.get) !== "loading") requestFile(get.dataset.get);
+    return;
+  }
+  if (e.target.matches("img.att")) showBig(`<img src="${e.target.src}">`);
+};
+$("#stage").onclick = (e) => {
+  const v = e.target.closest(".tile")?.querySelector("video");
+  if (!v) return;
+  if (v.requestFullscreen) v.requestFullscreen();
+  else v.webkitEnterFullscreen?.();
+};
+function showBig(html) {
+  $("#lightbox").innerHTML = html;
+  $("#lightbox").classList.remove("hidden");
+}
+$("#lightbox").onclick = () => $("#lightbox").classList.add("hidden");
+$("#inviteBtn").onclick = async () => {
+  try { await navigator.clipboard.writeText(location.href); toast("Davet bağlantısı kopyalandı — arkadaşlarına gönder"); }
+  catch { prompt("Bu bağlantıyı arkadaşlarına gönder:", location.href); }
+};
+$("#setBtn").onclick = () => openProfile(false);
+$("#muteBtn").onclick = () => {
+  voice.muted = !voice.muted;
+  const t = voice.stream?.getAudioTracks()[0];
+  if (t) t.enabled = !voice.muted;
+  pushState();
+};
+$("#deafBtn").onclick = () => {
+  voice.deaf = !voice.deaf;
+  for (const p of peers.values()) if (p.audioEl) p.audioEl.muted = voice.deaf;
+  pushState();
+};
+$("#screenBtn").onclick = toggleScreen;
+$("#leaveBtn").onclick = leaveVoice;
+$("#attachBtn").onclick = () => $("#fileIn").click();
+$("#fileIn").onchange = (e) => { sendFiles([...e.target.files]); e.target.value = ""; };
+let lastTyping = 0;
+$("#msgIn").oninput = () => {
+  if (Date.now() - lastTyping < 3000) return;
+  lastTyping = Date.now();
+  broadcast({ t: "typing", ch: currentCh });
+};
+$("#composer").onsubmit = (e) => {
+  e.preventDefault();
+  const text = $("#msgIn").value.trim();
+  if (!text) return;
+  $("#msgIn").value = "";
+  lastTyping = 0;
+  sendMsg(text);
+  if (window.Notification?.permission === "default") Notification.requestPermission();
+};
+$("#msgIn").onpaste = (e) => {
+  const files = [...(e.clipboardData?.files || [])];
+  if (files.length) { e.preventDefault(); sendFiles(files); }
+};
+let dragDepth = 0;
+addEventListener("dragenter", (e) => { if (room && e.dataTransfer.types.includes("Files")) { dragDepth++; $("#dropHint").classList.remove("hidden"); } });
+addEventListener("dragleave", () => { if (--dragDepth <= 0) { dragDepth = 0; $("#dropHint").classList.add("hidden"); } });
+addEventListener("dragover", (e) => e.preventDefault());
+addEventListener("drop", (e) => {
+  e.preventDefault();
+  dragDepth = 0;
+  $("#dropHint").classList.add("hidden");
+  if (room && e.dataTransfer.files.length) sendFiles([...e.dataTransfer.files]);
+});
+addEventListener("pagehide", () => broadcast({ t: "bye" }));
+addEventListener("online", () => { lastHello = 0; hello(); });
+addEventListener("hashchange", () => location.reload());
+
+// ---------- Açılış ----------
+const linkHash = (s) => `k=${s.key}&n=${encodeURIComponent(s.name)}`;
+function showLanding() {
+  $("#landing").classList.remove("hidden");
+  const list = store.get("lonca_servers", []);
+  $("#savedSrvs").innerHTML = list.length
+    ? `<p style="margin-bottom:8px">Sunucuların</p>` + list.map((s) => `<button class="btn ghost" style="width:100%;margin-bottom:6px" data-srv="${esc(s.key)}">${esc(s.name)}</button>`).join("")
+    : "";
+  $("#savedSrvs").onclick = (e) => {
+    const s = list.find((x) => x.key === e.target.dataset.srv);
+    if (s) location.hash = linkHash(s);
+  };
+  $("#createSrv").onclick = () => {
+    const name = $("#newSrvName").value.trim().slice(0, 32) || "Lonca";
+    location.hash = linkHash({ key: rid(22), name });
+  };
+}
+async function boot() {
+  await dbOpen();
+  const p = new URLSearchParams(location.hash.slice(1));
+  const key = p.get("k");
+  if (!key || !/^[a-z0-9]{16,64}$/.test(key)) return showLanding();
+  room = {
+    key, name: (p.get("n") || "Lonca").slice(0, 32),
+    topic: "lonca-" + hex(await sha("topic:" + key)).slice(0, 32),
+    aes: await crypto.subtle.importKey("raw", await sha("aes:" + key), "AES-GCM", false, ["encrypt", "decrypt"]),
+  };
+  const list = store.get("lonca_servers", []);
+  if (!list.some((s) => s.key === key)) store.set("lonca_servers", [...list, { key, name: room.name }]);
+  lastSeen = store.get("lonca_seen_" + room.topic, {});
+
+  const saved = await dbDo("msgs", "readonly", (s) => s.index("room").getAll(room.topic));
+  saved.sort((a, b) => a.ts - b.ts);
+  // Eskiler budanır (kanal tanımları kalır)
+  const extra = saved.filter((m) => m.kind === "msg").slice(0, -KEEP);
+  if (extra.length) dbDo("msgs", "readwrite", (s) => { extra.forEach((m) => s.delete(m.id)); });
+  const drop = new Set(extra.map((m) => m.id));
+  for (const m of saved) if (!drop.has(m.id)) msgs.set(m.id, m);
+
+  $("#app").classList.remove("hidden");
+  render();
+  renderMessages(true);
+  markSeen();
+  if (!me.name) openProfile(true);
+  relaySub();
+  pollMail();
+}
+boot();
+</script>
+</body>
+</html>
