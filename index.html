@@ -44,6 +44,15 @@ a{color:#6cb6ff}
 .vusers{margin:2px 0 4px 30px}
 .vu{display:flex;align-items:center;gap:7px;padding:3px 4px;color:var(--dim);font-size:14px}
 .vu .icons{margin-left:auto;font-size:12px}
+.volBtn{font-size:13px;width:24px;height:24px;border-radius:6px;flex:none;opacity:.7}
+.volBtn:hover{background:var(--hover);opacity:1}
+#volPop{position:fixed;z-index:32;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px;width:240px;
+  display:flex;flex-direction:column;gap:10px;box-shadow:0 8px 24px #0009}
+input[type=range]{padding:0;border:0;background:none;accent-color:var(--acc)}
+label.chk{flex-direction:row;align-items:center;color:var(--txt)}
+label.chk input{width:auto}
+.tileVol{position:absolute;left:8px;top:8px;background:#000a;border-radius:6px;padding:4px 8px;display:flex;gap:6px;align-items:center;font-size:13px;cursor:default}
+.tileVol input{width:110px}
 
 .av{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;font-weight:700;color:#1b1c20;flex:none;box-shadow:0 0 0 0 var(--ok);transition:box-shadow .1s}
 .av.sm{width:24px;height:24px;font-size:12px}
@@ -278,6 +287,13 @@ label{font-size:13px;color:var(--dim);display:flex;flex-direction:column;gap:6px
   </form>
 </div>
 
+<div id="volPop" class="hidden">
+  <b id="volName"></b>
+  <label>Konuşma sesi · Voice<input type="range" id="volVoice" min="0" max="1" step="0.05"></label>
+  <label id="volFilmRow">Paylaşılan video sesi · Video<input type="range" id="volFilm" min="0" max="1" step="0.05"></label>
+  <label class="chk"><input type="checkbox" id="volMute"> Sustur · Mute</label>
+  <small id="volIos" class="hidden" style="color:var(--dim)">iPhone'da seviye telefonun tuşlarıyla ayarlanır; burada en sola çekmek kapatır.</small>
+</div>
 <button id="updateBtn" class="btn hidden" style="position:fixed;right:16px;top:60px;z-index:31;box-shadow:0 8px 24px #000a">🔄 Yeni sürüm hazır · Yenile</button>
 <button id="soundBtn" class="btn hidden" style="position:fixed;left:50%;bottom:90px;transform:translateX(-50%);z-index:31;box-shadow:0 8px 24px #000a">🔊 Sesi açmak için dokun · Tap to enable sound</button>
 <div id="netOver" class="over hidden">
@@ -307,7 +323,7 @@ label{font-size:13px;color:var(--dim);display:flex;flex-direction:column;gap:6px
 // Asıl trafik (yazı, ses, ekran, dosya): tarayıcılar arası WebRTC, herkes herkese bağlı (mesh).
 
 // Her yayında artır: açık sayfalar yeni sürümü görüp kendini yeniler (GitHub Pages 10 dk önbellekliyor)
-const VERSION = "13";
+const VERSION = "14";
 const RELAY = "https://ntfy.sh/";
 const STUN = [{ urls: ["stun:stun.l.google.com:19302", "stun:stun.cloudflare.com:3478"] }];
 const DEFAULT_TEXT = ["genel", "oyun", "medya"];
@@ -762,6 +778,7 @@ async function onData(p, raw) {
       p.state = { uid: String(m.uid).slice(0, 20), name: String(m.name || "?").slice(0, 32), color: okColor(m.color),
                   voice: typeof m.voice === "string" ? m.voice.slice(0, 40) : null, muted: !!m.muted, deaf: !!m.deaf, screen: !!m.screen };
       syncMedia(p);
+      applyVolumes(p);   // uid artık belli: kayıtlı ses ayarı uygulanır
       render();
       break;
     case "sdp": {
@@ -1093,6 +1110,29 @@ function playAudio(el) {
     $("#soundBtn").classList.remove("hidden");
   });
 }
+// ---------- Kişi başına ses (yalnız bu cihazda, kişiye göre hatırlanır) ----------
+const volPrefs = store.get("lonca_vol", {});   // uid -> { voice, film, mute }
+const volOf = (p) => ({ voice: 1, film: 1, mute: false, ...volPrefs[p?.state.uid] });
+// İlk ses parçası mikrofon (sesli kanala girmek mikrofon ister), sonraki ekran paylaşımının sesi.
+// iPhone'da volume sayfaya bırakılmıyor (telefon tuşları); orada 0 = kapalı, gerisi açık.
+function applyVolumes(p) {
+  const v = volOf(p);
+  p.audioEls.forEach((el, i) => {
+    const film = i > 0;
+    const level = film ? v.film : v.voice;
+    el.muted = voice.deaf || level === 0 || (!film && v.mute);
+    if (!IOS) el.volume = Math.min(1, level);
+  });
+}
+function setVol(pid, key, val) {
+  const p = peers.get(pid);
+  if (!p?.state.uid) return;
+  volPrefs[p.state.uid] = { ...volOf(p), [key]: val };
+  store.set("lonca_vol", volPrefs);
+  applyVolumes(p);
+  render();
+}
+
 // Her gelen ses parçası (mikrofon, film sesi) kendi <audio> öğesinde çalar, biri ötekini ezmez
 function onTrack(p, track) {
   if (track.kind === "audio") {
@@ -1100,10 +1140,11 @@ function onTrack(p, track) {
     el.autoplay = true;
     el.setAttribute("playsinline", "");
     el.srcObject = new MediaStream([track]);
-    el.muted = voice.deaf;
     document.body.append(el);
     p.audioEls.push(el);
+    applyVolumes(p);
     playAudio(el);
+    renderStage();
     // Konuşma halkası yalnız ilk parça (mikrofon) için
     if (!IOS && p.audioEls.length === 1) watchLevel(p.id, el.srcObject);
   } else {
@@ -1158,7 +1199,7 @@ function render() {
     html += `<button class="ch ${voice.ch === c ? "on" : ""}" data-voice="${esc(c)}"><span class="ico">🔊</span>${esc(c)}</button><div class="vusers">`;
     if (voice.ch === c) html += voiceUser(me.name, me.color, "me", voice.muted, voice.deaf, !!voice.screen);
     for (const p of readyPeers()) {
-      if (p.state.voice === c) html += voiceUser(p.state.name, p.state.color, p.id, p.state.muted, p.state.deaf, p.state.screen);
+      if (p.state.voice === c) html += voiceUser(p.state.name, p.state.color, p.id, p.state.muted, p.state.deaf, p.state.screen, p);
     }
     html += `</div>`;
   }
@@ -1196,8 +1237,11 @@ function render() {
   renderStage();
   renderTyping();
 }
-function voiceUser(name, color, spk, muted, deaf, screen) {
-  return `<div class="vu">${avatar(name, color, "sm", spk)}<span>${esc(name)}</span><span class="icons">${screen ? "🖥️" : ""}${muted ? "🔇" : ""}${deaf ? "🎧" : ""}</span></div>`;
+// Başkalarının satırında 🔊: o kişinin sesini benim tarafımda ayarla
+function voiceUser(name, color, spk, muted, deaf, screen, peer) {
+  const v = peer && volOf(peer);
+  const volBtn = peer ? `<button class="volBtn" data-vol="${peer.id}" title="Ses ayarı · Volume">${v.mute ? "🔇" : "🔊"}</button>` : "";
+  return `<div class="vu">${avatar(name, color, "sm", spk)}<span>${esc(name)}</span><span class="icons">${screen ? "🖥️" : ""}${muted ? "🎙️✕" : ""}${deaf ? "🎧" : ""}</span>${volBtn}</div>`;
 }
 // Başkaları sürüklenip sesli kanala bırakılabilir ya da 📞 ile çağrılabilir
 function member(name, color, inVoice, pid) {
@@ -1229,7 +1273,14 @@ function renderStage() {
     if (!el) {
       el = document.createElement("div");
       el.className = "tile";
-      el.innerHTML = `<video autoplay playsinline muted></video><span></span>`;
+      el.innerHTML = `<video autoplay playsinline muted></video><span></span>` +
+        // Başkasının yayınında filmin sesi buradan; kendi yayınını zaten kendi sekmende duyuyorsun
+        (k !== "me" ? `<div class="tileVol" title="Video sesi · Video volume">🔊<input type="range" min="0" max="1" step="0.05"></div>` : "");
+      const tv = el.querySelector(".tileVol");
+      if (tv) {
+        tv.onclick = (e) => e.stopPropagation();   // tıklayınca film moduna geçmesin
+        tv.querySelector("input").oninput = (e) => setVol(k, "film", +e.target.value);
+      }
       $("#stage").append(el);
       tiles.set(k, el);
     }
@@ -1237,6 +1288,13 @@ function renderStage() {
     // iPhone'da srcObject atamak yetmiyor, açıkça başlatmak gerek; yoksa ilk karede donuyor
     if (v.srcObject !== t.stream) { v.srcObject = t.stream; v.muted = true; v.play().catch(() => {}); }
     el.querySelector("span").textContent = t.name;
+    const tv = el.querySelector(".tileVol");
+    if (tv) {
+      const peer = peers.get(k);
+      tv.classList.toggle("hidden", !peer || peer.audioEls.length < 2);   // film sesi yoksa çubuk da yok
+      const inp = tv.querySelector("input");
+      if (document.activeElement !== inp) inp.value = volOf(peer).film;
+    }
   }
   $("#stage").classList.toggle("hidden", !tiles.size);
   if (!tiles.size && $("#body").classList.contains("theater")) return setTheater(false);
@@ -1339,9 +1397,36 @@ $("#leaveSrv").onclick = () => {
 };
 
 // ---------- Olaylar ----------
+// Kişi ses penceresi
+let volPid = null;
+function openVolPop(btn) {
+  const p = peers.get(btn.dataset.vol);
+  if (!p) return;
+  volPid = p.id;
+  const v = volOf(p);
+  $("#volName").textContent = p.state.name;
+  $("#volVoice").value = v.voice;
+  $("#volFilm").value = v.film;
+  $("#volMute").checked = v.mute;
+  $("#volFilmRow").classList.toggle("hidden", p.audioEls.length < 2 && !p.state.screen);
+  $("#volIos").classList.toggle("hidden", !IOS);
+  const r = btn.getBoundingClientRect();
+  const pop = $("#volPop");
+  pop.classList.remove("hidden");
+  pop.style.left = Math.min(r.right + 8, innerWidth - pop.offsetWidth - 8) + "px";
+  pop.style.top = Math.min(r.top - 10, innerHeight - pop.offsetHeight - 8) + "px";
+}
+$("#volVoice").oninput = () => setVol(volPid, "voice", +$("#volVoice").value);
+$("#volFilm").oninput = () => setVol(volPid, "film", +$("#volFilm").value);
+$("#volMute").onchange = () => setVol(volPid, "mute", $("#volMute").checked);
+document.addEventListener("click", (e) => {
+  if (!e.target.closest("#volPop, [data-vol]")) $("#volPop").classList.add("hidden");
+});
+
 $("#chans").onclick = (e) => {
   const b = e.target.closest("button");
   if (!b) return;
+  if (b.dataset.vol) return openVolPop(b);
   if (b.dataset.add) return addChannel(b.dataset.add);
   if (b.dataset.ch) {
     currentCh = b.dataset.ch;
@@ -1487,7 +1572,7 @@ $("#muteBtn").onclick = () => {
 };
 $("#deafBtn").onclick = () => {
   voice.deaf = !voice.deaf;
-  for (const p of peers.values()) p.audioEls.forEach((el) => { el.muted = voice.deaf; });
+  for (const p of peers.values()) applyVolumes(p);
   pushState();
 };
 $("#screenBtn").onclick = toggleScreen;
