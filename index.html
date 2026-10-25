@@ -273,6 +273,7 @@ label{font-size:13px;color:var(--dim);display:flex;flex-direction:column;gap:6px
   </form>
 </div>
 
+<button id="soundBtn" class="btn hidden" style="position:fixed;left:50%;bottom:90px;transform:translateX(-50%);z-index:31;box-shadow:0 8px 24px #000a">🔊 Sesi açmak için dokun · Tap to enable sound</button>
 <div id="netOver" class="over hidden">
   <div class="card" style="width:min(560px,100%)">
     <h2>Bağlantı günlüğü · Connection log</h2>
@@ -300,7 +301,7 @@ label{font-size:13px;color:var(--dim);display:flex;flex-direction:column;gap:6px
 // Asıl trafik (yazı, ses, ekran, dosya): tarayıcılar arası WebRTC, herkes herkese bağlı (mesh).
 
 // Her yayında artır: açık sayfalar yeni sürümü görüp kendini yeniler (GitHub Pages 10 dk önbellekliyor)
-const VERSION = "8";
+const VERSION = "9";
 const RELAY = "https://ntfy.sh/";
 const STUN = [{ urls: ["stun:stun.l.google.com:19302", "stun:stun.cloudflare.com:3478"] }];
 const DEFAULT_TEXT = ["genel", "oyun", "medya"];
@@ -569,6 +570,22 @@ function renderNetLog() {
   const brokers = mqConns.map((c) => `${new URL(c.url).hostname.split(".")[1]} ${c.open ? "✓" : "✗"}`).join(", ");
   $("#netHead").textContent = `Tanışma: ${brokers} · TURN: ${turn?.urls?.length ? "açık" : "YOK (davet bağlantısında t= olmalı)"} · bağlı ${readyPeers().length}, bağlanıyor ${peers.size - readyPeers().length}`;
   $("#netText").textContent = netLog.join("\n") || "—";
+  // Ses gerçekten gidiyor/geliyor mu: kişi başına giden ve gelen ses (KB)
+  Promise.all(readyPeers().map(async (p) => {
+    let out = 0, inn = 0;
+    (await p.pc.getStats()).forEach((r) => {
+      if (r.kind !== "audio") return;
+      if (r.type === "outbound-rtp") out += r.bytesSent || 0;
+      if (r.type === "inbound-rtp") inn += r.bytesReceived || 0;
+    });
+    const el = p.audioEl;
+    return `🔊 ${p.state.name}: giden ${Math.round(out / 1024)} KB · gelen ${Math.round(inn / 1024)} KB` +
+      (el ? ` · çalıyor ${!el.paused ? "evet" : "HAYIR"}${el.muted ? " (sessize alınmış)" : ""}` : "");
+  })).then((lines) => {
+    const mic = voice.stream?.getAudioTracks()[0];
+    const head = `🎙️ Mikrofonum: ${mic ? (mic.enabled ? "açık" : "kapalı") + " · " + mic.readyState : "yok"} · kanal: ${voice.ch || "—"}`;
+    $("#netText").textContent = [head, ...lines, "", ...netLog].join("\n");
+  });
 }
 
 async function pollMail() {
@@ -950,6 +967,8 @@ async function joinVoice(ch) {
   }
   voice.stream.getAudioTracks()[0].enabled = !voice.muted;
   voice.ch = ch;
+  // Bu bir dokunuşun içinde: önceden gelmiş sesleri şimdi başlat
+  for (const p of peers.values()) if (p.audioEl) playAudio(p.audioEl);
   pushState();
 }
 function leaveVoice() {
@@ -991,16 +1010,27 @@ function setSender(p, kind, track) {
   if (!s) { if (track) p.senders[kind] = p.pc.addTrack(track); }
   else if (s.track !== (track || null)) s.replaceTrack(track || null);
 }
+// iPhone/iPad Safari: uzak sesi Web Audio'ya da bağlamak hoparlörden çalmasını kesebiliyor
+const IOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+// Safari dokunuşsuz başlayan sesi çalmaz; çalamazsak "sesi aç" düğmesi göster
+function playAudio(el) {
+  el.play().then(() => $("#soundBtn").classList.add("hidden")).catch(() => {
+    nlog("⚠️ Tarayıcı sesi çalmayı engelledi, dokunuş bekleniyor");
+    $("#soundBtn").classList.remove("hidden");
+  });
+}
 function onTrack(p, track) {
   if (track.kind === "audio") {
     if (!p.audioEl) {
       p.audioEl = document.createElement("audio");
       p.audioEl.autoplay = true;
+      p.audioEl.setAttribute("playsinline", "");
       document.body.append(p.audioEl);
     }
     p.audioEl.srcObject = new MediaStream([track]);
     p.audioEl.muted = voice.deaf;
-    watchLevel(p.id, p.audioEl.srcObject);
+    playAudio(p.audioEl);
+    if (!IOS) watchLevel(p.id, p.audioEl.srcObject);
   } else {
     p.videoStream = new MediaStream([track]);
     renderStage();
@@ -1257,6 +1287,10 @@ $("#rail").onclick = (e) => {
 $("#menuBtn").onclick = () => $("#app").classList.toggle("nav");
 $("#netBtn").onclick = $("#netInfo").onclick = () => { renderNetLog(); $("#netOver").classList.remove("hidden"); };
 $("#netClose").onclick = () => $("#netOver").classList.add("hidden");
+$("#soundBtn").onclick = () => {
+  actx?.resume();
+  for (const p of peers.values()) if (p.audioEl) playAudio(p.audioEl);
+};
 $("#netRetry").onclick = () => {
   lastHello = 0;
   lastTry.clear();
