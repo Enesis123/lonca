@@ -77,6 +77,40 @@ a{color:#6cb6ff}
 #body.sharing #stage{flex:1;max-height:none;align-content:center;overflow:auto}
 #body.sharing #chat{flex:0 0 340px;border-left:1px solid var(--panel)}
 #body.sharing.noChat #chat{display:none}
+/* Film modu: yayın tam ekran, sohbet köşede yarı saydam */
+#theaterBar{display:none}
+#body.theater{position:fixed;inset:0;z-index:25;background:#000}
+#body.theater #stage{position:absolute;inset:0;padding:0;gap:0}
+#body.theater .tile{flex:1 1 0;height:100%;aspect-ratio:auto;border-radius:0;cursor:default}
+#body.theater #chat{position:absolute;right:16px;bottom:16px;width:min(360px,calc(100% - 32px));height:min(50%,460px);
+  background:rgba(18,19,22,.72);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid #ffffff22;border-radius:12px;overflow:hidden}
+#body.theater .msg{padding:2px 10px;margin-top:6px;gap:8px}
+#body.theater .msg.cont{padding-left:50px}
+#body.theater .msg:hover{background:none}
+#body.theater .msg .av{width:32px;height:32px;font-size:14px}
+#body.theater .day{display:none}
+#body.theater #msgs{display:flex;flex-direction:column}
+#body.theater #msgs::before{content:"";flex:1}
+#chatHead{display:none}
+#body.theater #chatHead{display:flex;align-items:center;gap:4px;padding:6px 8px 6px 12px;font-size:13px;color:var(--dim);border-bottom:1px solid #ffffff14}
+#chatHead span{flex:1}
+#chatHead button{width:26px;height:26px;border-radius:6px;font-size:16px;line-height:1}
+#chatHead button:hover{background:#ffffff1a;color:#fff}
+/* Küçültülmüş: son birkaç mesaj + yazı kutusu */
+#body.theater.mini #chat{height:auto}
+#body.theater.mini #msgs{flex:none;max-height:96px}
+#body.theater.mini #typing{display:none}
+#body.theater #composer{margin:0 8px 8px}
+#body.theater #theaterBar{display:flex;gap:6px;position:absolute;top:12px;right:12px;z-index:2}
+#theaterBar button{background:rgba(18,19,22,.72);border-radius:8px;padding:6px 10px;font-size:14px}
+#theaterBar button:hover{background:#000}
+.orig{color:var(--dim);font-size:12px;margin-top:2px}
+#trBtn{font-size:12px;font-weight:700;border-radius:6px;padding:4px 7px;color:var(--dim);border:1px solid var(--line);white-space:nowrap}
+#trBtn.on{background:var(--acc);color:#1b1c20;border-color:var(--acc)}
+#composer{position:relative}
+#trMenu{position:absolute;right:0;bottom:calc(100% + 6px);background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px;
+  display:flex;flex-direction:column;gap:10px;width:240px;z-index:5;box-shadow:0 8px 24px #0009}
+#trMenu select{font:inherit;color:var(--txt);background:var(--side);border:1px solid var(--line);border-radius:8px;padding:8px}
 #chatToggle{margin-left:4px}
 #chatToggle.on{background:var(--acc);color:#1b1c20}
 #msgs{flex:1;overflow-y:auto;padding:10px 0 4px}
@@ -186,13 +220,24 @@ label{font-size:13px;color:var(--dim);display:flex;flex-direction:column;gap:6px
       <button class="ibtn hidden" id="chatToggle" title="Sohbeti gizle / göster (C)">💬</button>
     </div>
     <div id="body">
+      <div id="theaterBar">
+        <button id="tChat" title="Sohbeti gizle / göster (C)">💬 Sohbet</button>
+        <button id="tExit" title="Film modundan çık (Esc)">✕</button>
+      </div>
       <div id="stage" class="hidden"></div>
       <div id="chat">
+        <div id="chatHead"><span>💬 #<b id="chatHeadCh"></b></span>
+          <button id="miniBtn" title="Küçült / büyüt">–</button><button id="hideBtn" title="Gizle (C)">×</button></div>
         <div id="msgs"></div>
         <div id="typing"></div>
         <form id="composer">
           <button type="button" id="attachBtn" title="Dosya ekle">⊕</button>
           <input type="text" id="msgIn" maxlength="4000" autocomplete="off">
+          <button type="button" id="trBtn"></button>
+          <div id="trMenu" class="hidden">
+            <label>Yazdığım dil · I write in<select id="trFrom"></select></label>
+            <label>Şu dile çevir · Translate to<select id="trTo"></select></label>
+          </div>
           <input type="file" id="fileIn" multiple hidden>
         </form>
       </div>
@@ -208,7 +253,7 @@ label{font-size:13px;color:var(--dim);display:flex;flex-direction:column;gap:6px
     <label>Rengin<div class="colors" id="colorPick"></div></label>
     <details><summary style="color:var(--dim);font-size:13px;cursor:pointer">Gelişmiş: TURN sunucusu</summary>
       <p style="margin:8px 0">Bazı mobil ağlarda doğrudan bağlantı kurulamaz; o durumda bir TURN sunucusu gerekir. Boş bırakabilirsin.</p>
-      <label>Adres<input id="turnUrl" placeholder="turn:ornek.com:3478"></label>
+      <label>Adres (virgülle birden çok)<input id="turnUrl" placeholder="turn:ornek.com:3478"></label>
       <label>Kullanıcı<input id="turnUser"></label>
       <label>Parola<input id="turnPass" type="password"></label>
     </details>
@@ -326,10 +371,28 @@ const typing = new Map();        // peerId -> { ch, until }
 let lastSeen = {};
 let unreadTitle = 0;
 
+// Mobil veride (CGNAT) doğrudan bağlantı kurulamayınca trafik TURN'den aktarılır.
+// TURN bilgisi kodda değil, davet bağlantısının # kısmında (t=) dolaşır; depo herkese açık.
 const iceServers = () => {
   const t = store.get("lonca_turn", null);
-  return t?.urls ? [...STUN, t] : STUN;
+  return t?.urls?.length ? [...STUN, t] : STUN;
 };
+const turnParam = () => {
+  const t = store.get("lonca_turn", null);
+  return t?.urls?.length ? "&t=" + encodeURIComponent(btoa(JSON.stringify([t.urls, t.username, t.credential]))) : "";
+};
+// Bağlantıda t= varsa sakla ve adres çubuğundan sil
+function takeTurnParam() {
+  const p = new URLSearchParams(location.hash.slice(1));
+  const raw = p.get("t");
+  if (!raw) return;
+  try {
+    const [urls, username, credential] = JSON.parse(atob(raw));
+    if (Array.isArray(urls) && urls.every((u) => /^turns?:/.test(u))) store.set("lonca_turn", { urls, username, credential });
+  } catch {}
+  p.delete("t");
+  history.replaceState(null, "", "#" + p.toString());
+}
 const readyPeers = () => [...peers.values()].filter((p) => p.ready);
 const myState = () => ({ uid: me.uid, name: me.name, color: me.color, voice: voice.ch, muted: voice.muted, deaf: voice.deaf, screen: !!voice.screen });
 
@@ -395,7 +458,8 @@ function onHello(pid) {
 function iceDone(pc) {
   return new Promise((res) => {
     if (pc.iceGatheringState === "complete") return res();
-    const t = setTimeout(res, 2500);
+    // TURN adayları birkaç saniye sürebiliyor
+    const t = setTimeout(res, 4000);
     pc.addEventListener("icegatheringstatechange", () => {
       if (pc.iceGatheringState === "complete") { clearTimeout(t); res(); }
     });
@@ -569,6 +633,7 @@ async function sendMsg(text, file) {
   // Kimse çevrimiçi değilse ntfy'de 12 saat bekletilir (dosyanın kendisi değil, sadece haberi)
   if (!readyPeers().length) relayPub({ t: "mail", m });
   renderMessages(true);
+  return m;
 }
 function addChannel(type) {
   let title = prompt(type === "voice" ? "Sesli kanalın adı" : "Yazı kanalının adı");
@@ -800,6 +865,7 @@ function render() {
 
   $("#srvName").textContent = room.name;
   $("#chTitle").textContent = "# " + currentCh;
+  $("#chatHeadCh").textContent = currentCh;
   $("#msgIn").placeholder = `#${currentCh} kanalına mesaj gönder`;
   $("#netInfo").textContent = online.length
     ? `${online.length} kişiye doğrudan bağlı`
@@ -854,9 +920,11 @@ function renderStage() {
     el.querySelector("span").textContent = t.name;
   }
   $("#stage").classList.toggle("hidden", !tiles.size);
+  if (!tiles.size && $("#body").classList.contains("theater")) return setTheater(false);
   $("#body").classList.toggle("sharing", !!tiles.size);
   $("#chatToggle").classList.toggle("hidden", !tiles.size);
   $("#chatToggle").classList.toggle("on", !$("#body").classList.contains("noChat"));
+  $("#tChat").textContent = $("#body").classList.contains("noChat") ? "💬 Sohbeti aç" : "💬 Sohbeti gizle";
 }
 function toggleChat() {
   $("#body").classList.toggle("noChat");
@@ -889,7 +957,8 @@ function renderMessages(toBottom) {
       html += `<div class="day">${new Date(m.ts).toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" })}</div>`;
       prev = null;
     }
-    const content = (m.text ? `<div class="txt">${linkify(esc(m.text))}</div>` : "") + (m.file ? fileHtml(m.file) : "");
+    const orig = origTexts[m.id] ? `<div class="orig">✎ ${esc(origTexts[m.id])}</div>` : "";
+    const content = (m.text ? `<div class="txt">${linkify(esc(m.text))}</div>${orig}` : "") + (m.file ? fileHtml(m.file) : "");
     if (prev && prev.uid === m.uid && m.ts - prev.ts < 5 * 60000) {
       html += `<div class="msg cont"><div class="body">${content}</div></div>`;
     } else {
@@ -921,7 +990,7 @@ function fileHtml(f) {
 function openProfile(first) {
   $("#nameIn").value = me.name;
   const turn = store.get("lonca_turn", {});
-  $("#turnUrl").value = turn.urls || "";
+  $("#turnUrl").value = [].concat(turn.urls || []).join(", ");
   $("#turnUser").value = turn.username || "";
   $("#turnPass").value = turn.credential || "";
   $("#leaveSrv").classList.toggle("hidden", !!first);
@@ -939,8 +1008,8 @@ $("#nameForm").onsubmit = (e) => {
   e.preventDefault();
   me.name = $("#nameIn").value.trim().slice(0, 32) || "Gezgin";
   store.set("lonca_me", { uid: me.uid, name: me.name, color: me.color });
-  const urls = $("#turnUrl").value.trim();
-  store.set("lonca_turn", urls ? { urls, username: $("#turnUser").value, credential: $("#turnPass").value } : null);
+  const urls = $("#turnUrl").value.split(/[\s,]+/).filter((u) => /^turns?:/.test(u));
+  store.set("lonca_turn", urls.length ? { urls, username: $("#turnUser").value, credential: $("#turnPass").value } : null);
   $("#nameOver").classList.add("hidden");
   if (room) pushState();
 };
@@ -982,20 +1051,40 @@ $("#msgs").onclick = (e) => {
   }
   if (e.target.matches("img.att")) showBig(`<img src="${e.target.src}">`);
 };
+// Yayına tıklayınca film modu: sayfanın tamamı tam ekran olur ki sohbet üstünde kalabilsin
+// (iPhone Safari öğe tam ekranı desteklemiyor; orada sadece sabit konumlu kaplama olur)
+function setTheater(on) {
+  $("#body").classList.toggle("theater", on);
+  if (on) document.documentElement.requestFullscreen?.().catch(() => {});
+  else if (document.fullscreenElement) document.exitFullscreen();
+  renderStage();
+}
 $("#stage").onclick = (e) => {
-  const v = e.target.closest(".tile")?.querySelector("video");
-  if (!v) return;
-  if (v.requestFullscreen) v.requestFullscreen();
-  else v.webkitEnterFullscreen?.();
+  if (e.target.closest(".tile") && !$("#body").classList.contains("theater")) setTheater(true);
 };
+$("#tExit").onclick = () => setTheater(false);
+$("#hideBtn").onclick = () => toggleChat();
+$("#miniBtn").onclick = () => {
+  const mini = $("#body").classList.toggle("mini");
+  $("#miniBtn").textContent = mini ? "+" : "–";
+  $("#msgs").scrollTop = $("#msgs").scrollHeight;
+};
+$("#tChat").onclick = () => toggleChat();
+document.addEventListener("fullscreenchange", () => {
+  if (!document.fullscreenElement && $("#body").classList.contains("theater")) setTheater(false);
+});
+addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && $("#body").classList.contains("theater")) setTheater(false);
+});
 function showBig(html) {
   $("#lightbox").innerHTML = html;
   $("#lightbox").classList.remove("hidden");
 }
 $("#lightbox").onclick = () => $("#lightbox").classList.add("hidden");
 $("#inviteBtn").onclick = async () => {
-  try { await navigator.clipboard.writeText(location.href); toast("Davet bağlantısı kopyalandı — arkadaşlarına gönder"); }
-  catch { prompt("Bu bağlantıyı arkadaşlarına gönder:", location.href); }
+  const link = location.origin + location.pathname + "#" + linkHash(room) + turnParam();
+  try { await navigator.clipboard.writeText(link); toast("Davet bağlantısı kopyalandı — arkadaşlarına gönder"); }
+  catch { prompt("Bu bağlantıyı arkadaşlarına gönder:", link); }
 };
 $("#setBtn").onclick = () => openProfile(false);
 $("#muteBtn").onclick = () => {
@@ -1019,13 +1108,69 @@ $("#msgIn").oninput = () => {
   lastTyping = Date.now();
   broadcast({ t: "typing", ch: currentCh });
 };
-$("#composer").onsubmit = (e) => {
+// ---------- Çeviri: herkes yazdığı dili ve gideceği dili seçer, aslını yalnız kendisi görür ----------
+const LANGS = [["tr", "Türkçe"], ["en", "English"], ["id", "Bahasa Indonesia"], ["es", "Español"], ["fr", "Français"],
+  ["de", "Deutsch"], ["it", "Italiano"], ["pt", "Português"], ["nl", "Nederlands"], ["pl", "Polski"], ["ru", "Русский"],
+  ["uk", "Українська"], ["ar", "العربية"], ["fa", "فارسی"], ["hi", "हिन्दी"], ["ja", "日本語"], ["ko", "한국어"],
+  ["zh-CN", "中文"], ["vi", "Tiếng Việt"], ["th", "ไทย"], ["ms", "Bahasa Melayu"], ["tl", "Tagalog"], ["az", "Azərbaycanca"]];
+// Eski sürümde true/false tutuluyordu
+let tr = store.get("lonca_tr", null);
+if (!tr || typeof tr !== "object") tr = { from: "auto", to: tr === false ? "" : "en" };
+const origTexts = store.get("lonca_orig", {});   // mesaj id -> benim yazdığım asıl metin
+async function translate(text, from, to) {
+  const q = encodeURIComponent(text);
+  try {
+    const r = await fetch(`https://translate.googleapis.com/translate_a/t?client=dict-chrome-ex&sl=${from}&tl=${to}&q=${q}`);
+    const j = await r.json();
+    const out = Array.isArray(j[0]) ? j[0][0] : j[0];
+    if (typeof out === "string") return out;
+  } catch {}
+  try {
+    const r = await fetch(`https://translate.googleapis.com/translate_a/single?client=at&sl=${from}&tl=${to}&dt=t&q=${q}`);
+    return (await r.json())[0].map((p) => p[0]).join("");
+  } catch { return null; }
+}
+const langOpts = (first, sel) => first + LANGS.map(([c, n]) => `<option value="${c}" ${c === sel ? "selected" : ""}>${n}</option>`).join("");
+function renderTr() {
+  const short = (c) => c === "auto" ? "?" : c.slice(0, 2).toUpperCase();
+  $("#trBtn").textContent = tr.to ? `${short(tr.from)}→${short(tr.to)}` : "Çeviri";
+  $("#trBtn").classList.toggle("on", !!tr.to);
+  $("#trBtn").title = "Çeviri dilleri · Translation languages";
+  $("#trFrom").innerHTML = langOpts(`<option value="auto" ${tr.from === "auto" ? "selected" : ""}>Otomatik · Auto</option>`, tr.from);
+  $("#trTo").innerHTML = langOpts(`<option value="" ${!tr.to ? "selected" : ""}>Çevirme · Off</option>`, tr.to);
+}
+$("#trBtn").onclick = () => $("#trMenu").classList.toggle("hidden");
+$("#trFrom").onchange = $("#trTo").onchange = () => {
+  tr = { from: $("#trFrom").value, to: $("#trTo").value };
+  store.set("lonca_tr", tr);
+  renderTr();
+};
+document.addEventListener("click", (e) => {
+  if (!e.target.closest("#trMenu, #trBtn")) $("#trMenu").classList.add("hidden");
+});
+renderTr();
+
+$("#composer").onsubmit = async (e) => {
   e.preventDefault();
   const text = $("#msgIn").value.trim();
   if (!text) return;
   $("#msgIn").value = "";
   lastTyping = 0;
-  sendMsg(text);
+  let out = text;
+  if (tr.to && tr.from !== tr.to) {
+    const done = await translate(text, tr.from, tr.to);
+    if (done) out = done.trim();
+    else toast("Çeviri yapılamadı, yazdığın gibi gönderildi · Translation failed, sent as typed");
+  }
+  const m = await sendMsg(out);
+  if (out !== text) {
+    origTexts[m.id] = text;
+    // Eskileri buda, localStorage şişmesin
+    const ids = Object.keys(origTexts);
+    if (ids.length > 1000) ids.slice(0, ids.length - 1000).forEach((id) => delete origTexts[id]);
+    store.set("lonca_orig", origTexts);
+    renderMessages(true);
+  }
   if (window.Notification?.permission === "default") Notification.requestPermission();
 };
 $("#msgIn").onpaste = (e) => {
@@ -1065,6 +1210,7 @@ function showLanding() {
 }
 async function boot() {
   await dbOpen();
+  takeTurnParam();
   const p = new URLSearchParams(location.hash.slice(1));
   const key = p.get("k");
   if (!key || !/^[a-z0-9]{16,64}$/.test(key)) return showLanding();
