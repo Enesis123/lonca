@@ -307,7 +307,7 @@ label{font-size:13px;color:var(--dim);display:flex;flex-direction:column;gap:6px
 // Asıl trafik (yazı, ses, ekran, dosya): tarayıcılar arası WebRTC, herkes herkese bağlı (mesh).
 
 // Her yayında artır: açık sayfalar yeni sürümü görüp kendini yeniler (GitHub Pages 10 dk önbellekliyor)
-const VERSION = "12";
+const VERSION = "13";
 const RELAY = "https://ntfy.sh/";
 const STUN = [{ urls: ["stun:stun.l.google.com:19302", "stun:stun.cloudflare.com:3478"] }];
 const DEFAULT_TEXT = ["genel", "oyun", "medya"];
@@ -1032,10 +1032,11 @@ function leaveVoice() {
 async function toggleScreen() {
   if (voice.screen) return stopScreen();
   // audio:true → Chrome'da sekme paylaşırken "sekme sesini de paylaş" kutusu çıkar (film sesi)
-  try { voice.screen = await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: 30 }, audio: true }); }
-  catch { return; }
+  try {
+    voice.screen = await navigator.mediaDevices.getDisplayMedia({
+      video: { frameRate: 30, width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: true });
+  } catch { return; }
   const v = voice.screen.getVideoTracks()[0];
-  v.contentHint = "motion";   // film: keskin yazı yerine akıcı hareket öncelikli kodla
   v.onended = () => stopScreen();
   if (!voice.screen.getAudioTracks().length) toast("Film sesi gitmeyecek: paylaşırken \"sekme sesini de paylaş\"ı işaretle");
   pushState();
@@ -1062,8 +1063,26 @@ function syncMedia(p) {
 }
 function setSender(p, kind, track) {
   const s = p.senders[kind];
-  if (!s) { if (track) p.senders[kind] = p.pc.addTrack(track); }
-  else if (s.track !== (track || null)) s.replaceTrack(track || null);
+  if (!s) {
+    if (!track) return;
+    p.senders[kind] = p.pc.addTrack(track);
+    // Kodlama ayarları ancak görüşme bitince uygulanabiliyor
+    if (kind === "video") setTimeout(() => tuneVideo(p.senders.video), 3000);
+  } else if (s.track !== (track || null)) {
+    s.replaceTrack(track || null);
+    if (kind === "video" && track) tuneVideo(s);
+  }
+}
+// WebRTC ekran paylaşımına düşük bir bant tavanı koyuyor; film için yükselt.
+// "balanced": bağlantı zorlanınca hem çözünürlükten hem kare hızından biraz kıs
+async function tuneVideo(sender) {
+  if (!sender) return;
+  const prm = sender.getParameters();
+  if (!prm.encodings?.length) return;
+  prm.encodings[0].maxBitrate = 4500000;
+  prm.encodings[0].maxFramerate = 30;
+  prm.degradationPreference = "balanced";
+  try { await sender.setParameters(prm); } catch (e) { console.warn("video ayarı", e); }
 }
 // iPhone/iPad Safari: uzak sesi Web Audio'ya da bağlamak hoparlörden çalmasını kesebiliyor
 const IOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
