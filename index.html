@@ -70,6 +70,15 @@ a{color:#6cb6ff}
 .tile{position:relative;flex:1 1 320px;max-width:100%;background:#111;border-radius:8px;overflow:hidden;cursor:zoom-in;aspect-ratio:16/9}
 .tile video{width:100%;height:100%;object-fit:contain;display:block}
 .tile span{position:absolute;left:8px;bottom:8px;background:#000a;padding:2px 8px;border-radius:6px;font-size:13px}
+/* Ekran paylaşımı varken yayın ortada, sohbet sağ kenarda; 💬 ile gizlenir */
+#body{flex:1;display:flex;flex-direction:column;min-height:0}
+#chat{flex:1;display:flex;flex-direction:column;min-height:0;min-width:0}
+#body.sharing{flex-direction:row}
+#body.sharing #stage{flex:1;max-height:none;align-content:center;overflow:auto}
+#body.sharing #chat{flex:0 0 340px;border-left:1px solid var(--panel)}
+#body.sharing.noChat #chat{display:none}
+#chatToggle{margin-left:4px}
+#chatToggle.on{background:var(--acc);color:#1b1c20}
 #msgs{flex:1;overflow-y:auto;padding:10px 0 4px}
 .msg{display:flex;gap:14px;padding:3px 16px;margin-top:12px}
 .msg.cont{margin-top:0;padding-left:70px}
@@ -128,6 +137,10 @@ label{font-size:13px;color:var(--dim);display:flex;flex-direction:column;gap:6px
   #app:not(.nav) #rail,#app:not(.nav) #side{transform:translateX(-340px)}
   #menuBtn{display:grid}
   #netInfo{display:none}
+  #chatToggle{margin-left:auto}
+  #body.sharing{flex-direction:column}
+  #body.sharing #stage{flex:none;max-height:45%}
+  #body.sharing #chat{flex:1 1 auto;border-left:0}
 }
 </style>
 </head>
@@ -170,15 +183,20 @@ label{font-size:13px;color:var(--dim);display:flex;flex-direction:column;gap:6px
       <button class="ibtn" id="menuBtn">☰</button>
       <b id="chTitle"></b>
       <span id="netInfo"></span>
+      <button class="ibtn hidden" id="chatToggle" title="Sohbeti gizle / göster (C)">💬</button>
     </div>
-    <div id="stage" class="hidden"></div>
-    <div id="msgs"></div>
-    <div id="typing"></div>
-    <form id="composer">
-      <button type="button" id="attachBtn" title="Dosya ekle">⊕</button>
-      <input type="text" id="msgIn" maxlength="4000" autocomplete="off">
-      <input type="file" id="fileIn" multiple hidden>
-    </form>
+    <div id="body">
+      <div id="stage" class="hidden"></div>
+      <div id="chat">
+        <div id="msgs"></div>
+        <div id="typing"></div>
+        <form id="composer">
+          <button type="button" id="attachBtn" title="Dosya ekle">⊕</button>
+          <input type="text" id="msgIn" maxlength="4000" autocomplete="off">
+          <input type="file" id="fileIn" multiple hidden>
+        </form>
+      </div>
+    </div>
   </main>
   <aside id="members"></aside>
 </div>
@@ -836,7 +854,22 @@ function renderStage() {
     el.querySelector("span").textContent = t.name;
   }
   $("#stage").classList.toggle("hidden", !tiles.size);
+  $("#body").classList.toggle("sharing", !!tiles.size);
+  $("#chatToggle").classList.toggle("hidden", !tiles.size);
+  $("#chatToggle").classList.toggle("on", !$("#body").classList.contains("noChat"));
 }
+function toggleChat() {
+  $("#body").classList.toggle("noChat");
+  renderStage();
+  if (!$("#body").classList.contains("noChat")) $("#msgs").scrollTop = $("#msgs").scrollHeight;
+}
+$("#chatToggle").onclick = toggleChat;
+// Yazı yazmıyorken C tuşu da sohbeti gizler/açar
+addEventListener("keydown", (e) => {
+  if (e.key.toLowerCase() !== "c" || e.metaKey || e.ctrlKey || e.altKey || !tiles.size) return;
+  if (e.target.closest("input, textarea")) return;
+  toggleChat();
+});
 function renderTyping() {
   const now = Date.now();
   const names = readyPeers().filter((p) => typing.get(p.id)?.ch === currentCh && typing.get(p.id).until > now).map((p) => p.state.name);
