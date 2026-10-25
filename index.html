@@ -278,6 +278,7 @@ label{font-size:13px;color:var(--dim);display:flex;flex-direction:column;gap:6px
   </form>
 </div>
 
+<button id="updateBtn" class="btn hidden" style="position:fixed;right:16px;top:60px;z-index:31;box-shadow:0 8px 24px #000a">🔄 Yeni sürüm hazır · Yenile</button>
 <button id="soundBtn" class="btn hidden" style="position:fixed;left:50%;bottom:90px;transform:translateX(-50%);z-index:31;box-shadow:0 8px 24px #000a">🔊 Sesi açmak için dokun · Tap to enable sound</button>
 <div id="netOver" class="over hidden">
   <div class="card" style="width:min(560px,100%)">
@@ -306,7 +307,7 @@ label{font-size:13px;color:var(--dim);display:flex;flex-direction:column;gap:6px
 // Asıl trafik (yazı, ses, ekran, dosya): tarayıcılar arası WebRTC, herkes herkese bağlı (mesh).
 
 // Her yayında artır: açık sayfalar yeni sürümü görüp kendini yeniler (GitHub Pages 10 dk önbellekliyor)
-const VERSION = "11";
+const VERSION = "12";
 const RELAY = "https://ntfy.sh/";
 const STUN = [{ urls: ["stun:stun.l.google.com:19302", "stun:stun.cloudflare.com:3478"] }];
 const DEFAULT_TEXT = ["genel", "oyun", "medya"];
@@ -1582,11 +1583,16 @@ function showLanding() {
 }
 // Önbellekten eski sürüm geldiyse yenisini farklı adresle (?v=) aç
 async function checkVersion() {
-  if (location.protocol !== "https:" || voice.ch) return;  // konuşma ortasında yenileme yok
+  if (location.protocol !== "https:") return;
   try {
     const text = await (await fetch(location.pathname + "?t=" + Date.now(), { cache: "no-store" })).text();
     const latest = text.match(/const VERSION = "([^"]+)"/)?.[1];
-    if (latest && latest !== VERSION) location.replace(location.pathname + "?v=" + latest + location.hash);
+    if (!latest || latest === VERSION) return;
+    const go = () => location.replace(location.pathname + "?v=" + latest + location.hash);
+    // Konuşma ortasında kendiliğinden yenileme yok; düğme çıkar, kullanıcı seçsin
+    if (!voice.ch) return go();
+    $("#updateBtn").classList.remove("hidden");
+    $("#updateBtn").onclick = go;
   } catch {}
 }
 async function boot() {
