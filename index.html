@@ -423,18 +423,109 @@ function takeTurnParam() {
 const readyPeers = () => [...peers.values()].filter((p) => p.ready);
 const myState = () => ({ uid: me.uid, name: me.name, color: me.color, voice: voice.ch, muted: voice.muted, deaf: voice.deaf, screen: !!voice.screen });
 
-// ---------- ntfy: tanışma + çevrimdışı posta ----------
-let lastHello = 0;
-async function relayPub(obj) {
-  try { await fetch(RELAY + room.topic, { method: "POST", body: await seal(obj) }); }
-  catch (e) { console.warn("relay", e); }
+// ---------- Tanışma: herkese açık MQTT (kotasız), çevrimdışı posta: ntfy ----------
+// ntfy IP başına günde 250 mesajla sınırlı; tanışma/varlık/canlı yazı oraya gitmez.
+// İki ayrı MQTT sunucusuna birden bağlanılır, biri çökerse öteki taşır; tekrarlar ayıklanır.
+const BROKERS = ["wss://broker.hivemq.com:8884/mqtt", "wss://broker.emqx.io:8084/mqtt"];
+const enc = new TextEncoder();
+const mqStr = (s) => { const b = enc.encode(s); return [b.length >> 8, b.length & 255, ...b]; };
+function mqPacket(type, body) {
+  const len = [];
+  let n = body.length;
+  do { let d = n % 128; n = Math.floor(n / 128); if (n) d |= 128; len.push(d); } while (n);
+  return new Uint8Array([type, ...len, ...body]);
 }
+const mqConns = [];
+function mqttConnect(url) {
+  const c = { url, ws: null, open: false, buf: new Uint8Array(0) };
+  mqConns.push(c);
+  const start = () => {
+    const ws = new WebSocket(url, "mqtt");
+    c.ws = ws;
+    ws.binaryType = "arraybuffer";
+    ws.onopen = () => {
+      // CONNECT: MQTT 3.1.1, temiz oturum, 60 sn canlı tutma
+      ws.send(mqPacket(0x10, [...mqStr("MQTT"), 4, 0x02, 0, 60, ...mqStr("lonca-" + me.peer + "-" + rid(4))]));
+    };
+    ws.onmessage = (e) => {
+      const add = new Uint8Array(e.data);
+      const all = new Uint8Array(c.buf.length + add.length);
+      all.set(c.buf);
+      all.set(add, c.buf.length);
+      let i = 0;
+      while (i < all.length) {
+        let mul = 1, len = 0, j = i + 1, d;
+        do { if (j >= all.length) { d = -1; break; } d = all[j++]; len += (d & 127) * mul; mul *= 128; } while (d & 128);
+        if (d === -1 || j + len > all.length) break;
+        mqttPacketIn(c, all[i] >> 4, all.subarray(j, j + len));
+        i = j + len;
+      }
+      c.buf = all.slice(i);
+    };
+    ws.onclose = () => {
+      if (c.open) nlog(`Tanışma sunucusu koptu: ${new URL(url).hostname}`);
+      c.open = false;
+      clearInterval(c.ping);
+      setTimeout(start, 3000);
+    };
+    ws.onerror = () => {};
+  };
+  start();
+}
+function mqttPacketIn(c, type, body) {
+  if (type === 2) {            // CONNACK → abone ol
+    c.ws.send(mqPacket(0x82, [0, 1, ...mqStr("lonca/" + room.topic), 0]));
+    c.ping = setInterval(() => c.ws.readyState === 1 && c.ws.send(new Uint8Array([0xc0, 0])), 30000);
+  } else if (type === 9) {     // SUBACK → hazırız
+    const first = !mqConns.some((x) => x.open);
+    c.open = true;
+    nlog(`Tanışma sunucusu açık: ${new URL(c.url).hostname}`);
+    if (first) {
+      hello();
+      // İki kişi aynı anda girerse duyurular karşı dinlemeye başlamadan kaybolabiliyor: bir kez daha dene
+      setTimeout(() => { if (!peers.size) { lastHello = 0; hello(); } }, 8000);
+    }
+  } else if (type === 3) {     // PUBLISH (QoS 0)
+    const tl = (body[0] << 8) | body[1];
+    onMqttPayload(new TextDecoder().decode(body.subarray(2 + tl)));
+  }
+}
+const seenPayloads = new Set();
+async function onMqttPayload(text) {
+  if (seenPayloads.has(text)) return;
+  seenPayloads.add(text);
+  if (seenPayloads.size > 500) seenPayloads.delete(seenPayloads.values().next().value);
+  let o;
+  try { o = await unseal(text); } catch { return; }
+  if (o && o.from !== me.peer) onRelay(o);
+}
+async function relayPub(obj) {
+  const payload = await seal(obj);
+  const body = [...mqStr("lonca/" + room.topic), ...enc.encode(payload)];
+  let sent = 0;
+  for (const c of mqConns) if (c.open) { c.ws.send(mqPacket(0x30, body)); sent++; }
+  if (!sent) nlog("⚠️ Tanışma sunucusuna bağlı değil, gönderilemedi: " + obj.t);
+}
+// Kimse çevrimiçi değilken yazılan mesaj ntfy'de 12 saat bekletilir
+async function mailPub(m) {
+  try {
+    const r = await fetch(RELAY + room.topic, { method: "POST", body: await seal({ t: "mail", m }) });
+    if (!r.ok) nlog(`⚠️ Çevrimdışı posta gönderilemedi (ntfy ${r.status}${r.status === 429 ? ": günlük kota doldu" : ""})`);
+  } catch (e) { nlog("⚠️ Çevrimdışı posta gönderilemedi"); }
+}
+let lastHello = 0;
 function hello() {
   if (Date.now() - lastHello < 20000) return;
   lastHello = Date.now();
   nlog("Duyuru gönderildi (hello)");
   relayPub({ t: "hello", from: me.peer, uid: me.uid, name: me.name, color: me.color });
 }
+// Dakikada bir "buradayım": doğrudan bağlanamayanlar da listede güncel kalır,
+// ve henüz bağlanmadığımız biri varsa yeniden denenir
+setInterval(() => {
+  if (room && mqConns.some((c) => c.open)) relayPub({ t: "here", from: me.peer, uid: me.uid, name: me.name, color: me.color });
+}, 60000);
+const lastTry = new Map();   // peerId -> son bağlantı denemesi
 async function relayEvent(ev) {
   if (ev.event !== "message") return;
   let body = ev.message;
@@ -459,26 +550,25 @@ const candSummary = (sdp) => {
   for (const m of sdp.matchAll(/ typ (host|srflx|relay)/g)) n[m[1]]++;
   return `host ${n.host} · srflx ${n.srflx} · relay ${n.relay}`;
 };
+// Hiç aday çıkmıyorsa tarayıcı WebRTC'yi kısıtlıyor (VPN/gizlilik eklentisi, ör. MiniWarp'ın WebRTC kalkanı)
+let warnedNoIce = false;
+function checkNoIce(sdp) {
+  if (/ typ (host|srflx|relay)/.test(sdp)) return;
+  nlog("⚠️ Bu tarayıcıda hiç bağlantı adayı yok: bir eklenti/VPN WebRTC'yi engelliyor");
+  if (warnedNoIce) return;
+  warnedNoIce = true;
+  alert("Bu tarayıcı WebRTC bağlantılarını engelliyor, o yüzden kimseye bağlanamıyorsun.\n" +
+        "VPN ya da gizlilik eklentisindeki \"WebRTC koruması\"nı kapatıp sayfayı yenile.\n\n" +
+        "This browser is blocking WebRTC, so you can't connect to anyone.\n" +
+        "Turn off \"WebRTC protection\" in your VPN/privacy extension and reload.");
+}
 function renderNetLog() {
   const turn = store.get("lonca_turn", null);
-  $("#netHead").textContent = `TURN: ${turn?.urls?.length ? "açık · on" : "YOK · off (davet bağlantısında t= olmalı)"} · bağlı ${readyPeers().length}, bağlanıyor ${peers.size - readyPeers().length}`;
+  const brokers = mqConns.map((c) => `${new URL(c.url).hostname.split(".")[1]} ${c.open ? "✓" : "✗"}`).join(", ");
+  $("#netHead").textContent = `Tanışma: ${brokers} · TURN: ${turn?.urls?.length ? "açık" : "YOK (davet bağlantısında t= olmalı)"} · bağlı ${readyPeers().length}, bağlanıyor ${peers.size - readyPeers().length}`;
   $("#netText").textContent = netLog.join("\n") || "—";
 }
 
-let es = null;
-function relaySub() {
-  // Yalnız canlı olaylar; eski posta ayrıca bir kez çekiliyor
-  es?.close();
-  es = new EventSource(`${RELAY}${room.topic}/sse`);
-  es.onopen = () => { nlog("Tanışma kanalı açık"); hello(); };
-  es.onerror = () => nlog("Tanışma kanalı koptu, tarayıcı yeniden deniyor");
-  es.onmessage = async (e) => {
-    let ev;
-    try { ev = JSON.parse(e.data); } catch { return; }
-    const o = await relayEvent(ev);
-    if (o && o.from !== me.peer) onRelay(o);
-  };
-}
 async function pollMail() {
   try {
     const text = await (await fetch(`${RELAY}${room.topic}/json?poll=1&since=12h`)).text();
@@ -493,7 +583,7 @@ async function pollMail() {
 }
 // Doğrudan bağlanamayıp yalnız ntfy üzerinden yazışanlar da listede görünsün
 const relayOnly = new Map();   // uid -> { name, color, at }
-const RELAY_FRESH = 15 * 60000;
+const RELAY_FRESH = 150000;   // "here" dakikada bir geliyor; 2,5 dk sessizse çıkmış say
 function seenOnRelay(uid, name, color) {
   if (!uid || uid === me.uid) return;
   relayOnly.set(String(uid).slice(0, 20), { name: String(name || "?").slice(0, 32), color: okColor(color), at: Date.now() });
@@ -507,6 +597,11 @@ setInterval(() => { if (relayOnly.size) render(); }, 60000);
 
 function onRelay(o) {
   if (o.t === "hello") { seenOnRelay(o.uid, o.name, o.color); onHello(o.from); }
+  else if (o.t === "here") {
+    seenOnRelay(o.uid, o.name, o.color);
+    // Bağlı değilsek ve son denemeden 2 dk geçtiyse yeniden dene
+    if (!peers.has(o.from) && Date.now() - (lastTry.get(o.from) || 0) > 120000) onHello(o.from);
+  }
   else if (o.t === "mail") seenOnRelay(o.m?.uid, o.m?.name, o.m?.color);
   else if (o.t === "hey" && o.to === me.peer) startOffer(o.from);
   else if (o.t === "sig" && o.to === me.peer) onSignal(o);
@@ -516,8 +611,9 @@ function onRelay(o) {
 // ---------- WebRTC eşleri ----------
 // Çakışma olmasın diye teklifi hep kimliği küçük olan yapar.
 function onHello(pid) {
-  nlog(`Biri geldi: ${pid.slice(0, 4)}`);
   if (peers.get(pid)?.ready) return;
+  nlog(`Biri geldi: ${pid.slice(0, 4)}`);
+  lastTry.set(pid, Date.now());
   if (me.peer < pid) startOffer(pid);
   else relayPub({ t: "hey", from: me.peer, to: pid });
 }
@@ -593,6 +689,7 @@ async function startOffer(pid) {
   await iceDone(p.pc);
   if (peers.get(pid) !== p) return;
   nlog(`Teklif gönderildi → ${pid.slice(0, 4)} (${candSummary(p.pc.localDescription.sdp)})`);
+  checkNoIce(p.pc.localDescription.sdp);
   relayPub({ t: "sig", from: me.peer, to: pid, d: { type: "offer", sdp: p.pc.localDescription.sdp } });
 }
 async function onSignal(o) {
@@ -605,6 +702,7 @@ async function onSignal(o) {
     await iceDone(p.pc);
     if (peers.get(o.from) !== p) return;
     nlog(`Cevap gönderildi → ${o.from.slice(0, 4)} (${candSummary(p.pc.localDescription.sdp)})`);
+    checkNoIce(p.pc.localDescription.sdp);
     relayPub({ t: "sig", from: me.peer, to: o.from, d: { type: "answer", sdp: p.pc.localDescription.sdp } });
   } else {
     const p = peers.get(o.from);
@@ -726,8 +824,9 @@ async function sendMsg(text, file) {
   broadcast({ t: "msgs", list: [m] });
   markSeen();
   // Kimse çevrimiçi değilse ntfy'de 12 saat bekletilir (dosyanın kendisi değil, sadece haberi)
-  // Kimse yoksa ya da doğrudan bağlanamadığımız biri varsa ntfy'den de gönder
-  if (!readyPeers().length || relayOnlyList().length) relayPub({ t: "mail", m });
+  // Doğrudan bağlanamadığımız biri varsa MQTT'den canlı gider; hiç kimse yoksa ntfy'de bekletilir
+  if (relayOnlyList().length) relayPub({ t: "mail", m });
+  else if (!readyPeers().length) mailPub(m);
   renderMessages(true);
   return m;
 }
@@ -929,9 +1028,8 @@ document.addEventListener("visibilitychange", () => {
   document.title = "Lonca";
   markSeen();
   render();
-  // Telefonda uygulamadan çıkıp dönünce tanışma kanalı ölmüş olabiliyor
-  if (room && (!es || es.readyState === 2)) { nlog("Geri dönüldü, tanışma kanalı yeniden açılıyor"); relaySub(); }
-  else if (room && !readyPeers().length) { lastHello = 0; hello(); }
+  // Telefonda uygulamadan çıkıp dönünce bağlar kopmuş olabiliyor (MQTT kendisi yeniden bağlanır)
+  if (room && !readyPeers().length) { lastHello = 0; hello(); }
 });
 
 // ---------- Çizim ----------
@@ -1158,8 +1256,8 @@ $("#menuBtn").onclick = () => $("#app").classList.toggle("nav");
 $("#netBtn").onclick = $("#netInfo").onclick = () => { renderNetLog(); $("#netOver").classList.remove("hidden"); };
 $("#netClose").onclick = () => $("#netOver").classList.add("hidden");
 $("#netRetry").onclick = () => {
-  if (!es || es.readyState === 2) relaySub();
   lastHello = 0;
+  lastTry.clear();
   hello();
   toast("Yeniden duyuruldu · Announced again");
 };
@@ -1407,7 +1505,7 @@ async function boot() {
   renderMessages(true);
   markSeen();
   if (!me.name) openProfile(true);
-  relaySub();
+  BROKERS.forEach(mqttConnect);
   pollMail();
 }
 boot();
