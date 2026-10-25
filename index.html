@@ -54,6 +54,7 @@ a{color:#6cb6ff}
 #voiceBar .st{color:var(--ok);font-weight:700;font-size:14px}
 #voiceBar .sub{color:var(--dim);font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #voiceBar .row{display:flex;gap:6px;margin-top:6px}
+#micSel{width:100%;margin-top:6px;font:inherit;font-size:13px;color:var(--txt);background:var(--hover);border:0;border-radius:6px;padding:5px 6px}
 .vbtn{flex:1;background:var(--hover);border-radius:6px;padding:6px 0;font-size:14px}
 .vbtn:hover{background:#40434a}
 .vbtn.on{background:var(--acc);color:#1b1c20}
@@ -212,6 +213,7 @@ label{font-size:13px;color:var(--dim);display:flex;flex-direction:column;gap:6px
     <div id="voiceBar" class="hidden">
       <div class="st">🔊 Sesli bağlı</div>
       <div class="sub" id="voiceWhere"></div>
+      <select id="micSel" title="Mikrofon"></select>
       <div class="row">
         <button class="vbtn" id="screenBtn" title="Ekran paylaş">🖥️ Ekran</button>
         <button class="vbtn red" id="leaveBtn" title="Ayrıl">📞 Ayrıl</button>
@@ -304,7 +306,7 @@ label{font-size:13px;color:var(--dim);display:flex;flex-direction:column;gap:6px
 // Asıl trafik (yazı, ses, ekran, dosya): tarayıcılar arası WebRTC, herkes herkese bağlı (mesh).
 
 // Her yayında artır: açık sayfalar yeni sürümü görüp kendini yeniler (GitHub Pages 10 dk önbellekliyor)
-const VERSION = "10";
+const VERSION = "11";
 const RELAY = "https://ntfy.sh/";
 const STUN = [{ urls: ["stun:stun.l.google.com:19302", "stun:stun.cloudflare.com:3478"] }];
 const DEFAULT_TEXT = ["genel", "oyun", "medya"];
@@ -960,13 +962,57 @@ setInterval(() => {
   if (changed) document.querySelectorAll("[data-spk]").forEach((el) => el.classList.toggle("speak", !!levels.get(el.dataset.spk)?.on));
 }, 120);
 
+// ---------- Mikrofon seçimi ----------
+const MIC_OPTS = { echoCancellation: true, noiseSuppression: true, autoGainControl: true };
+const openMic = (id) => navigator.mediaDevices.getUserMedia({ audio: id ? { ...MIC_OPTS, deviceId: { exact: id } } : MIC_OPTS });
+const listMics = async () => (await navigator.mediaDevices.enumerateDevices()).filter((d) => d.kind === "audioinput" && d.deviceId !== "communications");
+// Seçim yoksa dahili mikrofonu tercih et: Bluetooth kulaklık mikrofonu açılınca ses kalitesi düşüyor ya da hiç gelmiyor
+async function preferredMic() {
+  const saved = store.get("lonca_mic", "");
+  const mics = await listMics();
+  if (saved && mics.some((d) => d.deviceId === saved)) return saved;
+  return mics.find((d) => /built-in|dahili|macbook/i.test(d.label))?.deviceId || "";
+}
+async function fillMics() {
+  const mics = await listMics();
+  const cur = voice.stream?.getAudioTracks()[0]?.getSettings().deviceId;
+  $("#micSel").innerHTML = mics.map((d, i) =>
+    `<option value="${esc(d.deviceId)}" ${d.deviceId === cur ? "selected" : ""}>🎙️ ${esc(d.label || "Mikrofon " + (i + 1))}</option>`).join("");
+  $("#micSel").classList.toggle("hidden", mics.length < 2);
+}
+async function switchMic(id, save = true) {
+  if (save) store.set("lonca_mic", id);
+  if (!voice.stream) return;
+  let s;
+  try { s = await openMic(id); } catch { return toast("Bu mikrofon açılamadı"); }
+  voice.stream.getTracks().forEach((t) => t.stop());
+  voice.stream = s;
+  s.getAudioTracks()[0].enabled = !voice.muted;
+  levels.delete("me");
+  watchLevel("me", s);
+  readyPeers().forEach(syncMedia);   // göndericiler replaceTrack ile yeni mikrofona geçer
+  fillMics();
+  nlog("Mikrofon: " + (s.getAudioTracks()[0].label || "?"));
+}
+$("#micSel").onchange = () => switchMic($("#micSel").value);
+navigator.mediaDevices?.addEventListener?.("devicechange", () => { if (voice.stream) fillMics(); });
+
 async function joinVoice(ch) {
   if (voice.ch === ch) return;
   if (!voice.stream) {
-    try {
-      voice.stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
-    } catch { return toast("Mikrofon izni alınamadı"); }
+    const id = await preferredMic();
+    try { voice.stream = await openMic(id); }
+    catch {
+      try { voice.stream = await openMic(""); } catch { return toast("Mikrofon izni alınamadı"); }
+    }
     watchLevel("me", voice.stream);
+    nlog("Mikrofon: " + (voice.stream.getAudioTracks()[0].label || "?"));
+    // İlk izinden önce cihaz adları boş gelir; dahili mikrofon ancak şimdi bulunabilir
+    if (!id) {
+      const again = await preferredMic();
+      if (again && again !== voice.stream.getAudioTracks()[0].getSettings().deviceId) await switchMic(again, false);
+    }
+    fillMics();
   }
   voice.stream.getAudioTracks()[0].enabled = !voice.muted;
   voice.ch = ch;
