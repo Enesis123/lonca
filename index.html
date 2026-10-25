@@ -140,6 +140,15 @@ a{color:#6cb6ff}
 .mem:hover{background:var(--hover)}
 .mem .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .mem small{display:block;color:var(--dim);font-size:12px}
+.mem[draggable]{cursor:grab}
+.callBtn{margin-left:auto;opacity:.5;font-size:14px;width:28px;height:28px;border-radius:6px;flex:none}
+.mem:hover .callBtn{opacity:1}
+.callBtn:hover{background:var(--ok)}
+.ch.drop{outline:2px dashed var(--acc);outline-offset:-2px;color:#fff}
+#callCard{position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:30;background:var(--side);border:1px solid var(--acc);border-radius:12px;
+  padding:14px 16px;box-shadow:0 10px 30px #000a;display:flex;flex-direction:column;gap:10px;width:min(360px,calc(100% - 32px))}
+#callCard .row{display:flex;gap:8px}
+#callCard .btn{flex:1}
 .dot{position:relative}
 .dot::after{content:"";position:absolute;right:-2px;bottom:-2px;width:10px;height:10px;border-radius:50%;background:var(--ok);border:3px solid var(--side)}
 
@@ -262,6 +271,10 @@ label{font-size:13px;color:var(--dim);display:flex;flex-direction:column;gap:6px
   </form>
 </div>
 
+<div id="callCard" class="hidden">
+  <div id="callText"></div>
+  <div class="row"><button class="btn" id="callJoin">Katıl · Join</button><button class="btn ghost" id="callLater">Sonra · Later</button></div>
+</div>
 <div id="lightbox" class="over hidden"></div>
 <div id="toast" class="hidden"></div>
 <div id="dropHint" class="hidden">Bırak, gönderilsin</div>
@@ -587,6 +600,11 @@ async function onData(p, raw) {
     case "bye":
       dropPeer(p.id, p);
       break;
+    case "call": {
+      const ch = String(m.ch);
+      if (channels("voice").includes(ch) && voice.ch !== ch) showCall(p.state.name, ch);
+      break;
+    }
     case "fget": serveFile(p, m.id); break;
     case "fno": nextSource(m.id); break;
     case "fpart": gotPart(p, m); break;
@@ -860,7 +878,7 @@ function render() {
   const online = readyPeers();
   let mem = `<div class="cat">Çevrimiçi — ${online.length + 1}</div>`;
   mem += member(me.name + " (sen)", me.color, voice.ch);
-  for (const p of online) mem += member(p.state.name || "Bağlanıyor…", p.state.color, p.state.voice);
+  for (const p of online) mem += member(p.state.name || "Bağlanıyor…", p.state.color, p.state.voice, p.id);
   $("#members").innerHTML = mem;
 
   $("#srvName").textContent = room.name;
@@ -885,8 +903,11 @@ function render() {
 function voiceUser(name, color, spk, muted, deaf, screen) {
   return `<div class="vu">${avatar(name, color, "sm", spk)}<span>${esc(name)}</span><span class="icons">${screen ? "🖥️" : ""}${muted ? "🔇" : ""}${deaf ? "🎧" : ""}</span></div>`;
 }
-function member(name, color, inVoice) {
-  return `<div class="mem"><div class="dot">${avatar(name, color, "md")}</div><div style="min-width:0"><div class="nm">${esc(name)}</div>${inVoice ? `<small>🔊 ${esc(inVoice)}</small>` : ""}</div></div>`;
+// Başkaları sürüklenip sesli kanala bırakılabilir ya da 📞 ile çağrılabilir
+function member(name, color, inVoice, pid) {
+  return `<div class="mem" ${pid ? `draggable="true" data-peer="${pid}" title="Sesli kanala sürükle"` : ""}><div class="dot">${avatar(name, color, "md")}</div>` +
+    `<div style="min-width:0"><div class="nm">${esc(name)}</div>${inVoice ? `<small>🔊 ${esc(inVoice)}</small>` : ""}</div>` +
+    (pid ? `<button class="callBtn" data-call="${pid}" title="Sesli kanala çağır">📞</button>` : "") + `</div>`;
 }
 function renderRail() {
   const list = store.get("lonca_servers", []);
@@ -1043,6 +1064,54 @@ $("#rail").onclick = (e) => {
   if ("newsrv" in b.dataset) location.hash = "";
 };
 $("#menuBtn").onclick = () => $("#app").classList.toggle("nav");
+
+// ---------- Sesli kanala çağırma ----------
+// Tarayıcı başkasının mikrofonunu izinsiz açtırmaz; karşıya "Katıl" kartı gider.
+function callToVoice(pid, ch) {
+  const p = peers.get(pid);
+  if (!p?.ready) return;
+  if (!voice.ch) joinVoice(ch);
+  sendTo(p, { t: "call", ch });
+  toast(`${p.state.name} → 🔊 ${ch} kanalına çağrıldı`);
+}
+let callCh = null;
+function showCall(name, ch) {
+  callCh = ch;
+  $("#callText").innerHTML = `📞 <b>${esc(name)}</b> seni <b>🔊 ${esc(ch)}</b> kanalına çağırıyor<br><small style="color:var(--dim)">${esc(name)} is calling you to ${esc(ch)}</small>`;
+  $("#callCard").classList.remove("hidden");
+  clearTimeout(showCall.timer);
+  showCall.timer = setTimeout(() => $("#callCard").classList.add("hidden"), 30000);
+  if (document.hidden && window.Notification?.permission === "granted") new Notification(`📞 ${name}`, { body: `🔊 ${ch}` });
+}
+$("#callJoin").onclick = () => { $("#callCard").classList.add("hidden"); if (callCh) joinVoice(callCh); };
+$("#callLater").onclick = () => $("#callCard").classList.add("hidden");
+$("#members").addEventListener("dragstart", (e) => {
+  const el = e.target.closest("[data-peer]");
+  if (!el) return;
+  e.dataTransfer.setData("text/lonca-peer", el.dataset.peer);
+  e.dataTransfer.effectAllowed = "move";
+});
+$("#members").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-call]");
+  if (b) callToVoice(b.dataset.call, voice.ch || channels("voice")[0]);
+});
+$("#chans").addEventListener("dragover", (e) => {
+  const v = e.target.closest("[data-voice]");
+  if (!v || !e.dataTransfer.types.includes("text/lonca-peer")) return;
+  e.preventDefault();
+  e.stopPropagation();
+  v.classList.add("drop");
+});
+$("#chans").addEventListener("dragleave", (e) => e.target.closest("[data-voice]")?.classList.remove("drop"));
+$("#chans").addEventListener("drop", (e) => {
+  const v = e.target.closest("[data-voice]");
+  const pid = e.dataTransfer.getData("text/lonca-peer");
+  if (!v || !pid) return;
+  e.preventDefault();
+  e.stopPropagation();
+  v.classList.remove("drop");
+  callToVoice(pid, v.dataset.voice);
+});
 $("#msgs").onclick = (e) => {
   const get = e.target.closest("[data-get]");
   if (get) {
