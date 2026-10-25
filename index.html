@@ -21,6 +21,9 @@ a{color:#6cb6ff}
 .srv{width:48px;height:48px;border-radius:24px;background:var(--side);display:grid;place-items:center;font-weight:700;transition:border-radius .15s,background .15s;flex:none}
 .srv:hover,.srv.on{border-radius:15px;background:var(--acc);color:#1b1c20}
 .srv.add{color:var(--ok);font-size:24px}
+.srvWrap{position:relative;flex:none}
+.srvX{position:absolute;top:-4px;right:-4px;width:20px;height:20px;border-radius:50%;background:var(--bad);color:#fff;font-size:12px;line-height:20px;text-align:center;display:none}
+.srvWrap:hover .srvX{display:block}
 .srv.add:hover{background:var(--ok);color:#fff}
 .sep{width:32px;height:2px;background:var(--line);flex:none}
 
@@ -301,7 +304,7 @@ label{font-size:13px;color:var(--dim);display:flex;flex-direction:column;gap:6px
 // Asıl trafik (yazı, ses, ekran, dosya): tarayıcılar arası WebRTC, herkes herkese bağlı (mesh).
 
 // Her yayında artır: açık sayfalar yeni sürümü görüp kendini yeniler (GitHub Pages 10 dk önbellekliyor)
-const VERSION = "9";
+const VERSION = "10";
 const RELAY = "https://ntfy.sh/";
 const STUN = [{ urls: ["stun:stun.l.google.com:19302", "stun:stun.cloudflare.com:3478"] }];
 const DEFAULT_TEXT = ["genel", "oyun", "medya"];
@@ -578,9 +581,9 @@ function renderNetLog() {
       if (r.type === "outbound-rtp") out += r.bytesSent || 0;
       if (r.type === "inbound-rtp") inn += r.bytesReceived || 0;
     });
-    const el = p.audioEl;
+    const playing = p.audioEls.map((el) => (el.paused ? "HAYIR" : "evet") + (el.muted ? "(sessiz)" : "")).join("/");
     return `🔊 ${p.state.name}: giden ${Math.round(out / 1024)} KB · gelen ${Math.round(inn / 1024)} KB` +
-      (el ? ` · çalıyor ${!el.paused ? "evet" : "HAYIR"}${el.muted ? " (sessize alınmış)" : ""}` : "");
+      (playing ? ` · çalıyor ${playing}` : " · ses parçası yok");
   })).then((lines) => {
     const mic = voice.stream?.getAudioTracks()[0];
     const head = `🎙️ Mikrofonum: ${mic ? (mic.enabled ? "açık" : "kapalı") + " · " + mic.readyState : "yok"} · kanal: ${voice.ch || "—"}`;
@@ -658,7 +661,7 @@ function makePeer(pid) {
   const pc = new RTCPeerConnection({ iceServers: iceServers() });
   const dc = pc.createDataChannel("lonca", { negotiated: true, id: 0 });
   const p = { id: pid, pc, dc, polite: me.peer > pid, makingOffer: false, ignoreOffer: false, ready: false,
-              state: {}, senders: {}, audioEl: null, videoStream: null, queue: Promise.resolve() };
+              state: {}, senders: {}, audioEls: [], videoStream: null, queue: Promise.resolve() };
   peers.set(pid, p);
   dc.bufferedAmountLowThreshold = 256 * 1024;
   dc.onopen = () => {
@@ -694,7 +697,7 @@ function dropPeer(pid, only, why) {
   peers.delete(pid);
   p.dc.onclose = null;
   try { p.pc.close(); } catch {}
-  p.audioEl?.remove();
+  p.audioEls.forEach((el) => el.remove());
   levels.delete(pid);
   typing.delete(pid);
   render();
@@ -968,7 +971,7 @@ async function joinVoice(ch) {
   voice.stream.getAudioTracks()[0].enabled = !voice.muted;
   voice.ch = ch;
   // Bu bir dokunuşun içinde: önceden gelmiş sesleri şimdi başlat
-  for (const p of peers.values()) if (p.audioEl) playAudio(p.audioEl);
+  for (const p of peers.values()) p.audioEls.forEach(playAudio);
   pushState();
 }
 function leaveVoice() {
@@ -981,9 +984,13 @@ function leaveVoice() {
 }
 async function toggleScreen() {
   if (voice.screen) return stopScreen();
-  try { voice.screen = await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: 30 }, audio: false }); }
+  // audio:true → Chrome'da sekme paylaşırken "sekme sesini de paylaş" kutusu çıkar (film sesi)
+  try { voice.screen = await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: 30 }, audio: true }); }
   catch { return; }
-  voice.screen.getVideoTracks()[0].onended = () => stopScreen();
+  const v = voice.screen.getVideoTracks()[0];
+  v.contentHint = "motion";   // film: keskin yazı yerine akıcı hareket öncelikli kodla
+  v.onended = () => stopScreen();
+  if (!voice.screen.getAudioTracks().length) toast("Film sesi gitmeyecek: paylaşırken \"sekme sesini de paylaş\"ı işaretle");
   pushState();
 }
 function stopScreen(push = true) {
@@ -1004,6 +1011,7 @@ function syncMedia(p) {
   const same = voice.ch && p.state.voice === voice.ch;
   setSender(p, "audio", same ? voice.stream?.getAudioTracks()[0] : null);
   setSender(p, "video", same ? voice.screen?.getVideoTracks()[0] : null);
+  setSender(p, "screenAudio", same ? voice.screen?.getAudioTracks()[0] : null);
 }
 function setSender(p, kind, track) {
   const s = p.senders[kind];
@@ -1019,18 +1027,19 @@ function playAudio(el) {
     $("#soundBtn").classList.remove("hidden");
   });
 }
+// Her gelen ses parçası (mikrofon, film sesi) kendi <audio> öğesinde çalar, biri ötekini ezmez
 function onTrack(p, track) {
   if (track.kind === "audio") {
-    if (!p.audioEl) {
-      p.audioEl = document.createElement("audio");
-      p.audioEl.autoplay = true;
-      p.audioEl.setAttribute("playsinline", "");
-      document.body.append(p.audioEl);
-    }
-    p.audioEl.srcObject = new MediaStream([track]);
-    p.audioEl.muted = voice.deaf;
-    playAudio(p.audioEl);
-    if (!IOS) watchLevel(p.id, p.audioEl.srcObject);
+    const el = document.createElement("audio");
+    el.autoplay = true;
+    el.setAttribute("playsinline", "");
+    el.srcObject = new MediaStream([track]);
+    el.muted = voice.deaf;
+    document.body.append(el);
+    p.audioEls.push(el);
+    playAudio(el);
+    // Konuşma halkası yalnız ilk parça (mikrofon) için
+    if (!IOS && p.audioEls.length === 1) watchLevel(p.id, el.srcObject);
   } else {
     p.videoStream = new MediaStream([track]);
     renderStage();
@@ -1133,7 +1142,8 @@ function member(name, color, inVoice, pid) {
 function renderRail() {
   const list = store.get("lonca_servers", []);
   $("#rail").innerHTML = list.map((s) =>
-    `<button class="srv ${s.key === room.key ? "on" : ""}" data-srv="${esc(s.key)}" title="${esc(s.name)}">${esc(initial(s.name))}</button>`
+    `<div class="srvWrap"><button class="srv ${s.key === room.key ? "on" : ""}" data-srv="${esc(s.key)}" title="${esc(s.name)}">${esc(initial(s.name))}</button>` +
+    `<button class="srvX" data-del="${esc(s.key)}" title="Listeden çıkar">×</button></div>`
   ).join("") + `<div class="sep"></div><button class="srv add" data-newsrv title="Yeni sunucu">+</button>`;
 }
 
@@ -1158,7 +1168,8 @@ function renderStage() {
       tiles.set(k, el);
     }
     const v = el.querySelector("video");
-    if (v.srcObject !== t.stream) v.srcObject = t.stream;
+    // iPhone'da srcObject atamak yetmiyor, açıkça başlatmak gerek; yoksa ilk karede donuyor
+    if (v.srcObject !== t.stream) { v.srcObject = t.stream; v.muted = true; v.play().catch(() => {}); }
     el.querySelector("span").textContent = t.name;
   }
   $("#stage").classList.toggle("hidden", !tiles.size);
@@ -1278,6 +1289,15 @@ $("#chans").onclick = (e) => {
 $("#rail").onclick = (e) => {
   const b = e.target.closest("button");
   if (!b) return;
+  if (b.dataset.del) {
+    const list = store.get("lonca_servers", []);
+    const s = list.find((x) => x.key === b.dataset.del);
+    if (!s || !confirm(`"${s.name}" listeden çıkarılsın mı? (Mesaj geçmişi bu cihazda kalır)`)) return;
+    store.set("lonca_servers", list.filter((x) => x.key !== s.key));
+    if (s.key === room.key) location.hash = "";
+    else renderRail();
+    return;
+  }
   if (b.dataset.srv) {
     const s = store.get("lonca_servers", []).find((x) => x.key === b.dataset.srv);
     if (s && s.key !== room.key) location.hash = linkHash(s);
@@ -1289,7 +1309,7 @@ $("#netBtn").onclick = $("#netInfo").onclick = () => { renderNetLog(); $("#netOv
 $("#netClose").onclick = () => $("#netOver").classList.add("hidden");
 $("#soundBtn").onclick = () => {
   actx?.resume();
-  for (const p of peers.values()) if (p.audioEl) playAudio(p.audioEl);
+  for (const p of peers.values()) p.audioEls.forEach(playAudio);
 };
 $("#netRetry").onclick = () => {
   lastHello = 0;
@@ -1401,7 +1421,7 @@ $("#muteBtn").onclick = () => {
 };
 $("#deafBtn").onclick = () => {
   voice.deaf = !voice.deaf;
-  for (const p of peers.values()) if (p.audioEl) p.audioEl.muted = voice.deaf;
+  for (const p of peers.values()) p.audioEls.forEach((el) => { el.muted = voice.deaf; });
   pushState();
 };
 $("#screenBtn").onclick = toggleScreen;
