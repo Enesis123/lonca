@@ -192,10 +192,10 @@ label{font-size:13px;color:var(--dim);display:flex;flex-direction:column;gap:6px
 <div id="landing" class="hidden">
   <div class="card">
     <h1>Lonca</h1>
-    <p>Arkadaşlarınla yazılı, sesli ve ekran paylaşımlı sohbet. Sunucu yok: herkes birbirine doğrudan bağlanır, içerik şifrelidir.</p>
-    <label>Sunucunun adı<input id="newSrvName" maxlength="32" placeholder="ör. Kanka Loncası"></label>
-    <button class="btn" id="createSrv">Sunucu oluştur</button>
-    <p>Davet bağlantın varsa direkt onu aç; buraya gerek yok.</p>
+    <p>Text, voice and screen-share chat with your friends. No servers in between: everyone connects directly and everything is encrypted.</p>
+    <label>Server name<input id="newSrvName" maxlength="32" placeholder="e.g. Movie Night"></label>
+    <button class="btn" id="createSrv">Create server</button>
+    <p>Got an invite link? Just open it, you don't need this page.</p>
     <div id="savedSrvs"></div>
   </div>
 </div>
@@ -257,17 +257,17 @@ label{font-size:13px;color:var(--dim);display:flex;flex-direction:column;gap:6px
 
 <div id="nameOver" class="over hidden">
   <form class="card" id="nameForm">
-    <h2>Profilin</h2>
-    <label>Takma adın<input id="nameIn" maxlength="32" required></label>
-    <label>Rengin<div class="colors" id="colorPick"></div></label>
-    <details><summary style="color:var(--dim);font-size:13px;cursor:pointer">Gelişmiş: TURN sunucusu</summary>
-      <p style="margin:8px 0">Bazı mobil ağlarda doğrudan bağlantı kurulamaz; o durumda bir TURN sunucusu gerekir. Boş bırakabilirsin.</p>
-      <label>Adres (virgülle birden çok)<input id="turnUrl" placeholder="turn:ornek.com:3478"></label>
-      <label>Kullanıcı<input id="turnUser"></label>
-      <label>Parola<input id="turnPass" type="password"></label>
+    <h2>Your profile</h2>
+    <label>Nickname<input id="nameIn" maxlength="32" required></label>
+    <label>Color<div class="colors" id="colorPick"></div></label>
+    <details><summary style="color:var(--dim);font-size:13px;cursor:pointer">Advanced: TURN server</summary>
+      <p style="margin:8px 0">Some mobile networks can't connect directly and need a TURN server. Invite links already include one, so you can leave this empty.</p>
+      <label>Address (comma-separated)<input id="turnUrl" placeholder="turn:example.com:3478"></label>
+      <label>Username<input id="turnUser"></label>
+      <label>Password<input id="turnPass" type="password"></label>
     </details>
-    <button class="btn">Kaydet</button>
-    <button type="button" class="btn ghost hidden" id="leaveSrv">Bu sunucuyu listeden çıkar</button>
+    <button class="btn">Save</button>
+    <button type="button" class="btn ghost hidden" id="leaveSrv">Remove this server from my list</button>
   </form>
 </div>
 
@@ -1027,7 +1027,7 @@ $("#colorPick").onclick = (e) => {
 };
 $("#nameForm").onsubmit = (e) => {
   e.preventDefault();
-  me.name = $("#nameIn").value.trim().slice(0, 32) || "Gezgin";
+  me.name = $("#nameIn").value.trim().slice(0, 32) || "Guest";
   store.set("lonca_me", { uid: me.uid, name: me.name, color: me.color });
   const urls = $("#turnUrl").value.split(/[\s,]+/).filter((u) => /^turns?:/.test(u));
   store.set("lonca_turn", urls.length ? { urls, username: $("#turnUser").value, credential: $("#turnPass").value } : null);
@@ -1266,7 +1266,7 @@ function showLanding() {
   $("#landing").classList.remove("hidden");
   const list = store.get("lonca_servers", []);
   $("#savedSrvs").innerHTML = list.length
-    ? `<p style="margin-bottom:8px">Sunucuların</p>` + list.map((s) => `<button class="btn ghost" style="width:100%;margin-bottom:6px" data-srv="${esc(s.key)}">${esc(s.name)}</button>`).join("")
+    ? `<p style="margin-bottom:8px">Your servers</p>` + list.map((s) => `<button class="btn ghost" style="width:100%;margin-bottom:6px" data-srv="${esc(s.key)}">${esc(s.name)}</button>`).join("")
     : "";
   $("#savedSrvs").onclick = (e) => {
     const s = list.find((x) => x.key === e.target.dataset.srv);
