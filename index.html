@@ -3,48 +3,58 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#1b1c20">
+<meta name="theme-color" content="#1e1f22">
 <title>Lonca</title>
 <style>
-:root{--rail:#1b1c20;--side:#24262b;--main:#2d2f35;--panel:#1f2024;--line:#383a41;--txt:#e7e7ea;--dim:#989aa3;--acc:#e8a33d;--acc2:#cf8c2a;--ok:#3ba55d;--bad:#ed4245;--hover:#33353b}
+:root{--rail:#1e1f22;--side:#2b2d31;--main:#313338;--panel:#232428;--line:#3f4147;--txt:#dbdee1;--dim:#949ba4;--ico:#b5bac1;--acc:#5865f2;--acc2:#4752c4;--ok:#23a55a;--bad:#f23f43;--hover:#35373c;--elev:0 1px 0 rgba(2,2,2,.2),0 1.5px 0 rgba(6,6,7,.05),0 2px 0 rgba(2,2,2,.05)}
 *{box-sizing:border-box}
 html,body{margin:0;height:100%;background:var(--main);color:var(--txt);font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;overflow:hidden}
 button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;padding:0}
-input{font:inherit;color:var(--txt);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 12px;outline:none;width:100%}
+input{font:inherit;color:var(--txt);background:var(--rail);border:1px solid transparent;border-radius:4px;padding:10px 12px;outline:none;width:100%}
 input:focus{border-color:var(--acc)}
-a{color:#6cb6ff}
+a{color:#00a8fc}
 .hidden{display:none!important}
+#chans,#members,#msgs{scrollbar-width:thin;scrollbar-color:#1a1b1e transparent}
+#rail{scrollbar-width:none}
 
 /* Düzen: sunucu rayı | kanallar | sohbet | üyeler */
-#app{display:grid;grid-template-columns:72px 240px 1fr 220px;height:100dvh}
+#app{display:grid;grid-template-columns:72px 240px 1fr 240px;height:100dvh}
 #rail{background:var(--rail);display:flex;flex-direction:column;align-items:center;gap:8px;padding:12px 0;overflow-y:auto}
-.srv{width:48px;height:48px;border-radius:24px;background:var(--side);display:grid;place-items:center;font-weight:700;transition:border-radius .15s,background .15s;flex:none}
-.srv:hover,.srv.on{border-radius:15px;background:var(--acc);color:#1b1c20}
+.srv{position:relative;width:48px;height:48px;border-radius:24px;background:var(--main);display:grid;place-items:center;font-weight:700;transition:border-radius .15s,background .15s;flex:none}
+.srv:hover,.srv.on{border-radius:16px;background:var(--acc);color:#fff}
+.srv.on::before,.srv:not(.add):hover::before{content:"";position:absolute;left:-12px;top:14px;width:4px;height:20px;background:#f2f3f5;border-radius:0 4px 4px 0}
+.srv.on::before{top:4px;height:40px}
 .srv.add{color:var(--ok);font-size:24px}
 .srvWrap{position:relative;flex:none}
-.srvX{position:absolute;top:-4px;right:-4px;width:20px;height:20px;border-radius:50%;background:var(--bad);color:#fff;font-size:12px;line-height:20px;text-align:center;display:none}
-.srvWrap:hover .srvX{display:block}
+.srvX{position:absolute;top:-4px;right:-4px;width:20px;height:20px;border-radius:50%;background:#4e5058;color:#fff;font-size:13px;line-height:20px;text-align:center}
+.srvX:hover,.savedX:hover{background:var(--bad)}
+#savedSrvs{max-height:40vh;overflow-y:auto}
+.savedRow{display:flex;gap:6px;margin-bottom:6px}
+.savedRow .btn{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.savedX{width:42px;flex:none;border-radius:4px;background:#4e5058;color:#fff;font-size:18px}
 .srv.add:hover{background:var(--ok);color:#fff}
 .sep{width:32px;height:2px;background:var(--line);flex:none}
 
 #side{background:var(--side);display:flex;flex-direction:column;min-width:0}
-#srvHead{height:48px;padding:0 14px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--panel);font-weight:700;gap:8px}
+#srvHead{height:48px;padding:0 14px;display:flex;align-items:center;justify-content:space-between;box-shadow:var(--elev);position:relative;z-index:1;flex:none;font-weight:600;gap:8px}
 #srvHead span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.pill{font-size:12px;font-weight:600;background:var(--acc);color:#1b1c20;border-radius:6px;padding:4px 8px;flex:none}
+.pill{font-size:12px;font-weight:600;background:var(--acc);color:#fff;border-radius:4px;padding:4px 8px;flex:none}
 #chans{flex:1;overflow-y:auto;padding:10px 8px}
-.cat{display:flex;justify-content:space-between;align-items:center;color:var(--dim);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;margin:14px 6px 4px}
+.cat{display:flex;justify-content:space-between;align-items:center;color:var(--dim);font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.02em;margin:16px 8px 4px}
 .cat button{color:var(--dim);font-size:18px;line-height:1}
 .cat button:hover{color:var(--txt)}
-.ch{display:flex;align-items:center;gap:6px;width:100%;padding:6px 8px;border-radius:6px;color:var(--dim);text-align:left}
+.ch{position:relative;display:flex;align-items:center;gap:6px;width:100%;padding:6px 8px;margin-bottom:2px;border-radius:4px;color:var(--dim);font-weight:500;text-align:left}
 .ch:hover{background:var(--hover);color:var(--txt)}
-.ch.on{background:#3d4047;color:#fff}
+.ch.on{background:#404249;color:#fff}
 .ch.unread{color:#fff;font-weight:600}
-.ch.unread::after{content:"";width:8px;height:8px;border-radius:4px;background:#fff;margin-left:auto}
-.ch .ico{width:18px;text-align:center;opacity:.8}
-.vusers{margin:2px 0 4px 30px}
+.ch.unread::after{content:"";position:absolute;left:-8px;top:50%;margin-top:-4px;width:4px;height:8px;border-radius:0 4px 4px 0;background:#f2f3f5}
+.ch .ico{width:20px;height:20px;display:grid;place-items:center;font-size:21px;font-weight:400;line-height:1;color:#80848e;flex:none}
+.vusers{margin:0 0 4px 36px}
 .vu{display:flex;align-items:center;gap:7px;padding:3px 4px;color:var(--dim);font-size:14px}
-.vu .icons{margin-left:auto;font-size:12px}
-.volBtn{font-size:13px;width:24px;height:24px;border-radius:6px;flex:none;opacity:.7}
+.vu .icons{margin-left:auto;display:flex;align-items:center;gap:4px;color:var(--ico)}
+.vu .icons svg,.volBtn svg,.callBtn svg{width:16px;height:16px}
+.live{background:var(--bad);color:#fff;font-size:10px;font-weight:700;border-radius:8px;padding:1px 6px}
+.volBtn{display:grid;place-items:center;width:24px;height:24px;border-radius:4px;flex:none;color:var(--ico);opacity:.7}
 .volBtn:hover{background:var(--hover);opacity:1}
 #volPop{position:fixed;z-index:32;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px;width:240px;
   display:flex;flex-direction:column;gap:10px;box-shadow:0 8px 24px #0009}
@@ -54,29 +64,32 @@ label.chk input{width:auto}
 .tileVol{position:absolute;left:8px;top:8px;background:#000a;border-radius:6px;padding:4px 8px;display:flex;gap:6px;align-items:center;font-size:13px;cursor:default}
 .tileVol input{width:110px}
 
-.av{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;font-weight:700;color:#1b1c20;flex:none;box-shadow:0 0 0 0 var(--ok);transition:box-shadow .1s}
+.av{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;font-weight:600;color:#fff;text-shadow:0 1px 2px #0006;flex:none;box-shadow:0 0 0 0 var(--ok);transition:box-shadow .1s}
 .av.sm{width:24px;height:24px;font-size:12px}
 .av.md{width:32px;height:32px;font-size:14px}
 .av.speak{box-shadow:0 0 0 3px var(--ok)}
 
-#voiceBar{border-top:1px solid var(--line);padding:8px 10px;background:var(--panel)}
-#voiceBar .st{color:var(--ok);font-weight:700;font-size:14px}
+#voiceBar{border-bottom:1px solid var(--line);padding:8px 10px;background:var(--panel)}
+.vtop{display:flex;align-items:center;gap:8px}
+.vtop>div{flex:1;min-width:0}
+#voiceBar .st{color:var(--ok);font-weight:600;font-size:14px}
 #voiceBar .sub{color:var(--dim);font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #voiceBar .row{display:flex;gap:6px;margin-top:6px}
-#micSel{width:100%;margin-top:6px;font:inherit;font-size:13px;color:var(--txt);background:var(--hover);border:0;border-radius:6px;padding:5px 6px}
-.vbtn{flex:1;background:var(--hover);border-radius:6px;padding:6px 0;font-size:14px}
+#micSel{width:100%;margin-top:6px;font:inherit;font-size:13px;color:var(--txt);background:var(--rail);border:0;border-radius:4px;padding:5px 6px}
+.vbtn{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:var(--hover);border-radius:4px;padding:6px 0;font-size:14px;font-weight:500}
 .vbtn:hover{background:#40434a}
-.vbtn.on{background:var(--acc);color:#1b1c20}
-.vbtn.red:hover{background:var(--bad)}
+.vbtn.on{background:var(--acc);color:#fff}
 #mePanel{display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--panel)}
 #mePanel .nm{flex:1;min-width:0;font-weight:600;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.ibtn{width:32px;height:32px;border-radius:6px;display:grid;place-items:center;font-size:16px;flex:none}
-.ibtn:hover{background:var(--hover)}
+.ibtn{position:relative;width:32px;height:32px;border-radius:4px;display:grid;place-items:center;font-size:16px;flex:none;color:var(--ico)}
+.ibtn:hover{background:var(--hover);color:var(--txt)}
 .ibtn.off{color:var(--bad)}
+#deafBtn.off::after{content:"";position:absolute;width:24px;height:2px;background:var(--bad);transform:rotate(45deg)}
 
 #main{display:flex;flex-direction:column;min-width:0;min-height:0}
-#chHead{height:48px;padding:0 14px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--panel);flex:none}
-#chHead b{font-size:16px}
+#chHead{height:48px;padding:0 14px;display:flex;align-items:center;gap:10px;box-shadow:var(--elev);position:relative;z-index:1;flex:none}
+#chHead b{font-size:16px;font-weight:600}
+#chTitle::before{content:"#";color:#80848e;font-size:22px;font-weight:400;margin-right:8px;vertical-align:-1px}
 #netInfo{color:var(--dim);font-size:13px;margin-left:auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
 #netInfo:hover{color:var(--txt)}
 #menuBtn{display:none}
@@ -120,20 +133,20 @@ label.chk input{width:auto}
 #theaterBar button:hover{background:#000}
 .orig{color:var(--dim);font-size:12px;margin-top:2px}
 #trBtn{font-size:12px;font-weight:700;border-radius:6px;padding:4px 7px;color:var(--dim);border:1px solid var(--line);white-space:nowrap}
-#trBtn.on{background:var(--acc);color:#1b1c20;border-color:var(--acc)}
+#trBtn.on{background:var(--acc);color:#fff;border-color:var(--acc)}
 #composer{position:relative}
 #trMenu{position:absolute;right:0;bottom:calc(100% + 6px);background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px;
   display:flex;flex-direction:column;gap:10px;width:240px;z-index:5;box-shadow:0 8px 24px #0009}
 #trMenu select{font:inherit;color:var(--txt);background:var(--side);border:1px solid var(--line);border-radius:8px;padding:8px}
 #chatToggle{margin-left:4px}
-#chatToggle.on{background:var(--acc);color:#1b1c20}
+#chatToggle.on{background:var(--acc);color:#fff}
 #msgs{flex:1;overflow-y:auto;padding:10px 0 4px}
-.msg{display:flex;gap:14px;padding:3px 16px;margin-top:12px}
-.msg.cont{margin-top:0;padding-left:70px}
-.msg:hover{background:#2a2c31}
+.msg{display:flex;gap:16px;padding:2px 16px;margin-top:17px;font-size:16px;line-height:1.375}
+.msg.cont{margin-top:0;padding-left:72px}
+.msg:hover{background:rgba(2,2,2,.06)}
 .msg .body{min-width:0;flex:1}
 .msg .hd{display:flex;gap:8px;align-items:baseline}
-.msg .hd b{font-weight:600}
+.msg .hd b{font-weight:500}
 .msg time{color:var(--dim);font-size:12px}
 .txt{white-space:pre-wrap;word-wrap:break-word}
 .att{display:block;max-width:min(420px,100%);max-height:320px;border-radius:8px;margin-top:4px;cursor:zoom-in}
@@ -142,20 +155,23 @@ label.chk input{width:auto}
 .filecard small{color:var(--dim);white-space:nowrap}
 .day{display:flex;align-items:center;gap:10px;color:var(--dim);font-size:12px;margin:18px 16px 4px}
 .day::before,.day::after{content:"";flex:1;height:1px;background:var(--line)}
-.empty{color:var(--dim);padding:40px 16px;text-align:center}
-#typing{height:20px;padding:0 18px;color:var(--dim);font-size:13px;flex:none}
-#composer{display:flex;gap:8px;align-items:center;margin:0 16px 16px;background:#383a41;border-radius:10px;padding:4px 6px;flex:none}
-#composer input[type=text]{background:none;border:0;padding:10px 4px}
-#attachBtn{font-size:22px;width:36px;height:36px;color:var(--dim)}
+.empty{color:var(--dim);padding:40px 16px}
+.empty h2{margin:8px 0;color:#f2f3f5;font-size:32px;line-height:1.25}
+.hashBig{width:68px;height:68px;border-radius:50%;background:#41434a;color:#f2f3f5;display:grid;place-items:center;font-size:42px}
+#typing{height:24px;line-height:24px;padding:0 16px;color:var(--dim);font-size:12px;flex:none}
+#composer{display:flex;gap:8px;align-items:center;margin:0 16px;background:#383a40;border-radius:8px;padding:0 8px;flex:none}
+#composer input[type=text]{background:none;border:0;padding:11px 4px;font-size:16px}
+#attachBtn{display:grid;place-items:center;width:36px;height:36px;color:var(--ico)}
 #attachBtn:hover{color:var(--txt)}
 
 #members{background:var(--side);overflow-y:auto;padding:14px 8px}
-.mem{display:flex;align-items:center;gap:10px;padding:6px 8px;border-radius:6px}
+.mem{display:flex;align-items:center;gap:12px;padding:5px 8px;border-radius:4px}
 .mem:hover{background:var(--hover)}
 .mem .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .mem small{display:block;color:var(--dim);font-size:12px}
-.mem[draggable]{cursor:grab}
-.callBtn{margin-left:auto;opacity:.5;font-size:14px;width:28px;height:28px;border-radius:6px;flex:none}
+.mem small svg{width:12px;height:12px;vertical-align:-2px}
+.mem[draggable],.vu[draggable]{cursor:grab}
+.callBtn{margin-left:auto;display:grid;place-items:center;opacity:.5;color:var(--ico);width:28px;height:28px;border-radius:4px;flex:none}
 .mem:hover .callBtn{opacity:1}
 .callBtn:hover{background:var(--ok)}
 .ch.drop{outline:2px dashed var(--acc);outline-offset:-2px;color:#fff}
@@ -168,22 +184,22 @@ label.chk input{width:auto}
 
 /* Açılış / pencereler */
 .over{position:fixed;inset:0;background:#000b;display:grid;place-items:center;z-index:20;padding:16px}
-.card{background:var(--side);border-radius:14px;padding:24px;width:min(420px,100%);display:flex;flex-direction:column;gap:12px}
+.card{background:var(--main);border-radius:8px;padding:24px;width:min(420px,100%);display:flex;flex-direction:column;gap:12px}
 .card h2{margin:0}
 .card p{margin:0;color:var(--dim);font-size:14px}
-.btn{background:var(--acc);color:#1b1c20;font-weight:700;border-radius:8px;padding:11px}
+.btn{background:var(--acc);color:#fff;font-weight:500;border-radius:4px;padding:11px}
 .btn:hover{background:var(--acc2)}
-.btn.ghost{background:var(--hover);color:var(--txt);font-weight:600}
+.btn.ghost{background:#4e5058;color:#fff}
 .colors{display:flex;gap:8px;flex-wrap:wrap}
 .colors button{width:30px;height:30px;border-radius:50%}
 .colors button.on{outline:3px solid #fff;outline-offset:2px}
 label{font-size:13px;color:var(--dim);display:flex;flex-direction:column;gap:6px}
-#landing{position:fixed;inset:0;display:grid;place-items:center;background:radial-gradient(circle at 30% 20%,#3a2f1d,#1b1c20 60%);padding:16px}
-#landing h1{margin:0;font-size:44px;color:var(--acc);letter-spacing:-.02em}
+#landing{position:fixed;inset:0;display:grid;place-items:center;background:var(--acc);padding:16px}
+#landing h1{margin:0;font-size:32px;color:#f2f3f5;text-align:center}
 #lightbox{cursor:zoom-out}
 #lightbox img,#lightbox video{max-width:96vw;max-height:94vh;border-radius:8px}
 #toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:#111;padding:10px 16px;border-radius:8px;z-index:30;box-shadow:0 6px 20px #0008}
-#dropHint{position:fixed;inset:0;background:#e8a33d33;border:4px dashed var(--acc);z-index:15;display:grid;place-items:center;font-size:24px;font-weight:700;pointer-events:none}
+#dropHint{position:fixed;inset:0;background:#5865f233;border:4px dashed var(--acc);z-index:15;display:grid;place-items:center;font-size:24px;font-weight:700;pointer-events:none}
 
 @media (max-width:1000px){#app{grid-template-columns:72px 240px 1fr}#members{display:none}}
 @media (max-width:700px){
@@ -220,20 +236,21 @@ label{font-size:13px;color:var(--dim);display:flex;flex-direction:column;gap:6px
     <div id="srvHead"><span id="srvName"></span><button class="pill" id="inviteBtn">Davet et</button></div>
     <div id="chans"></div>
     <div id="voiceBar" class="hidden">
-      <div class="st">🔊 Sesli bağlı</div>
-      <div class="sub" id="voiceWhere"></div>
+      <div class="vtop">
+        <div><div class="st">Ses Bağlı</div><div class="sub" id="voiceWhere"></div></div>
+        <button class="ibtn" id="leaveBtn" title="Bağlantıyı kes" data-i="callEnd"></button>
+      </div>
       <select id="micSel" title="Mikrofon"></select>
       <div class="row">
-        <button class="vbtn" id="screenBtn" title="Ekran paylaş">🖥️ Ekran</button>
-        <button class="vbtn red" id="leaveBtn" title="Ayrıl">📞 Ayrıl</button>
+        <button class="vbtn" id="screenBtn" title="Pencere, ekran ya da sekme paylaş" data-i="screen">Ekranı paylaş</button>
       </div>
     </div>
     <div id="mePanel">
       <div class="av md" id="meAv"></div>
       <div class="nm" id="meName"></div>
-      <button class="ibtn" id="muteBtn" title="Mikrofonu kapat">🎙️</button>
-      <button class="ibtn" id="deafBtn" title="Sesi kapat">🎧</button>
-      <button class="ibtn" id="setBtn" title="Ayarlar">⚙️</button>
+      <button class="ibtn" id="muteBtn" title="Mikrofonu kapat"></button>
+      <button class="ibtn" id="deafBtn" title="Sesi kapat" data-i="headset"></button>
+      <button class="ibtn" id="setBtn" title="Ayarlar" data-i="gear"></button>
     </div>
   </aside>
   <main id="main">
@@ -241,8 +258,8 @@ label{font-size:13px;color:var(--dim);display:flex;flex-direction:column;gap:6px
       <button class="ibtn" id="menuBtn">☰</button>
       <b id="chTitle"></b>
       <span id="netInfo"></span>
-      <button class="ibtn" id="netBtn" title="Bağlantı günlüğü · Connection log">🔌</button>
-      <button class="ibtn hidden" id="chatToggle" title="Sohbeti gizle / göster (C)">💬</button>
+      <button class="ibtn" id="netBtn" title="Bağlantı günlüğü · Connection log" data-i="plug"></button>
+      <button class="ibtn hidden" id="chatToggle" title="Sohbeti gizle / göster (C)" data-i="chat"></button>
     </div>
     <div id="body">
       <div id="theaterBar">
@@ -254,9 +271,8 @@ label{font-size:13px;color:var(--dim);display:flex;flex-direction:column;gap:6px
         <div id="chatHead"><span>💬 #<b id="chatHeadCh"></b></span>
           <button id="miniBtn" title="Küçült / büyüt">–</button><button id="hideBtn" title="Gizle (C)">×</button></div>
         <div id="msgs"></div>
-        <div id="typing"></div>
         <form id="composer">
-          <button type="button" id="attachBtn" title="Dosya ekle">⊕</button>
+          <button type="button" id="attachBtn" title="Dosya ekle" data-i="plus"></button>
           <input type="text" id="msgIn" maxlength="4000" autocomplete="off">
           <button type="button" id="trBtn"></button>
           <div id="trMenu" class="hidden">
@@ -265,6 +281,7 @@ label{font-size:13px;color:var(--dim);display:flex;flex-direction:column;gap:6px
           </div>
           <input type="file" id="fileIn" multiple hidden>
         </form>
+        <div id="typing"></div>
       </div>
     </div>
   </main>
@@ -323,11 +340,27 @@ label{font-size:13px;color:var(--dim);display:flex;flex-direction:column;gap:6px
 // Asıl trafik (yazı, ses, ekran, dosya): tarayıcılar arası WebRTC, herkes herkese bağlı (mesh).
 
 // Her yayında artır: açık sayfalar yeni sürümü görüp kendini yeniler (GitHub Pages 10 dk önbellekliyor)
-const VERSION = "14";
+const VERSION = "15";
 const RELAY = "https://ntfy.sh/";
 const STUN = [{ urls: ["stun:stun.l.google.com:19302", "stun:stun.cloudflare.com:3478"] }];
 const DEFAULT_TEXT = ["genel", "oyun", "medya"];
 const DEFAULT_VOICE = ["Sesli Sohbet", "Oyun Odası"];
+const svg = (d) => `<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="${d}"/></svg>`;
+const ICON = {
+  speaker: svg("M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"),
+  speakerOff: svg("M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"),
+  mic: svg("M12 14c1.66 0 2.99-1.34 2.99-3L15 5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z"),
+  micOff: svg("M19 11h-1.7c0 .74-.16 1.43-.43 2.05l1.23 1.23c.56-.98.9-2.09.9-3.28zm-4.02.17c0-.06.02-.11.02-.17V5c0-1.66-1.34-3-3-3S9 3.34 9 5v.18l5.98 5.99zM4.27 3L3 4.27l6.01 6.01V11c0 1.66 1.33 3 2.99 3 .22 0 .44-.03.65-.08l1.66 1.66c-.71.33-1.5.52-2.31.52-2.76 0-5.3-2.1-5.3-5.1H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c.91-.13 1.77-.45 2.54-.9L19.73 21 21 19.73 4.27 3z"),
+  headset: svg("M12 1c-4.97 0-9 4.03-9 9v7c0 1.66 1.34 3 3 3h3v-8H5v-2c0-3.87 3.13-7 7-7s7 3.13 7 7v2h-4v8h3c1.66 0 3-1.34 3-3v-7c0-4.97-4.03-9-9-9z"),
+  gear: svg("M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"),
+  screen: svg("M20 18c1.1 0 1.99-.9 1.99-2L22 6c0-1.11-.9-2-2-2H4c-1.11 0-2 .89-2 2v10c0 1.1.89 2 2 2H0v2h24v-2h-4zm-7-3.53v-2.19c-2.78 0-4.61.85-6 2.72.56-2.67 2.11-5.33 6-5.87V7l4 3.73-4 3.74z"),
+  callEnd: svg("M12 9c-1.6 0-3.15.25-4.6.72v3.1c0 .39-.23.74-.56.9-.98.49-1.87 1.12-2.66 1.85-.18.18-.43.28-.7.28-.28 0-.53-.11-.71-.29L.29 13.08c-.18-.17-.29-.42-.29-.7 0-.28.11-.53.29-.71C3.34 8.78 7.46 7 12 7s8.66 1.78 11.71 4.67c.18.18.29.43.29.71 0 .28-.11.53-.29.71l-2.48 2.48c-.18.18-.43.29-.71.29-.27 0-.52-.11-.7-.28-.79-.74-1.69-1.36-2.67-1.85-.33-.16-.56-.5-.56-.9v-3.1C15.15 9.25 13.6 9 12 9z"),
+  phone: svg("M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"),
+  chat: svg("M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"),
+  plus: svg("M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"),
+  plug: svg("M16.01 7L16 3h-2v4h-4V3H8v4h-.01C7 6.99 6 7.99 6 8.99v5.49L9.5 18v3h5v-3l3.5-3.51v-5.5c0-1-1-2-1.99-1.99z"),
+};
+document.querySelectorAll("[data-i]").forEach((el) => el.insertAdjacentHTML("afterbegin", ICON[el.dataset.i]));
 const COLORS = ["#e8a33d", "#f47b67", "#ed4245", "#eb459e", "#9b84ee", "#5865f2", "#45ddc0", "#3ba55d", "#fee75c", "#a3a6aa"];
 const CHUNK = 12000;                 // dosya parçası (bayt)
 const MAX_FILE = 50 * 1024 * 1024;
@@ -819,7 +852,10 @@ async function onData(p, raw) {
       break;
     case "call": {
       const ch = String(m.ch);
-      if (channels("voice").includes(ch) && voice.ch !== ch) showCall(p.state.name, ch);
+      if (!channels("voice").includes(ch) || voice.ch === ch) break;
+      // Zaten sesli kanaldaysa mikrofonu açık: doğrudan taşı. Değilse tarayıcı izinsiz açtırmaz, kart gider.
+      if (voice.ch) { joinVoice(ch); toast(`${p.state.name} seni ${ch} kanalına taşıdı · moved you`); }
+      else showCall(p.state.name, ch);
       break;
     }
     case "fget": serveFile(p, m.id); break;
@@ -1048,14 +1084,18 @@ function leaveVoice() {
 }
 async function toggleScreen() {
   if (voice.screen) return stopScreen();
-  // audio:true → Chrome'da sekme paylaşırken "sekme sesini de paylaş" kutusu çıkar (film sesi)
+  // Seçici pencere sekmesiyle açılır; surfaceSwitching yayın sürerken "bunun yerine bu sekmeyi paylaş" düğmesi verir.
+  // Ses Chrome'da sekmede kesin gelir, pencere/ekranda işletim sistemine bağlı.
   try {
     voice.screen = await navigator.mediaDevices.getDisplayMedia({
-      video: { frameRate: 30, width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: true });
+      video: { displaySurface: "window", frameRate: 30, width: { ideal: 1920 }, height: { ideal: 1080 } },
+      audio: true, systemAudio: "include", surfaceSwitching: "include" });
   } catch { return; }
   const v = voice.screen.getVideoTracks()[0];
   v.onended = () => stopScreen();
-  if (!voice.screen.getAudioTracks().length) toast("Film sesi gitmeyecek: paylaşırken \"sekme sesini de paylaş\"ı işaretle");
+  if (!voice.screen.getAudioTracks().length) toast(v.getSettings().displaySurface === "browser"
+    ? "Video sesi gitmeyecek: paylaşırken \"sekme sesini de paylaş\"ı işaretle"
+    : "Bu paylaşımda video sesi gitmiyor. Ses gerekiyorsa Sekme'yi seçip sesini aç");
   pushState();
 }
 function stopScreen(push = true) {
@@ -1186,7 +1226,7 @@ const avatar = (name, color, cls = "", spk = "") =>
   `<div class="av ${cls}" style="background:${okColor(color)}" ${spk ? `data-spk="${spk}"` : ""}>${esc(initial(name))}</div>`;
 
 function render() {
-  if (!room) return;
+  if (!room || draggingPeer) return;   // sürüklenen satır yeniden çizilirse sürükleme kopar
   renderRail();
   // Kanallar
   const unread = (ch) => [...msgs.values()].some((m) => m.kind === "msg" && m.ch === ch && m.uid !== me.uid && m.ts > (lastSeen[ch] || 0));
@@ -1196,7 +1236,7 @@ function render() {
   }
   html += `<div class="cat">Sesli kanallar<button data-add="voice" title="Kanal ekle">+</button></div>`;
   for (const c of channels("voice")) {
-    html += `<button class="ch ${voice.ch === c ? "on" : ""}" data-voice="${esc(c)}"><span class="ico">🔊</span>${esc(c)}</button><div class="vusers">`;
+    html += `<button class="ch ${voice.ch === c ? "on" : ""}" data-voice="${esc(c)}"><span class="ico">${ICON.speaker}</span>${esc(c)}</button><div class="vusers">`;
     if (voice.ch === c) html += voiceUser(me.name, me.color, "me", voice.muted, voice.deaf, !!voice.screen);
     for (const p of readyPeers()) {
       if (p.state.voice === c) html += voiceUser(p.state.name, p.state.color, p.id, p.state.muted, p.state.deaf, p.state.screen, p);
@@ -1218,7 +1258,7 @@ function render() {
   $("#members").innerHTML = mem;
 
   $("#srvName").textContent = room.name;
-  $("#chTitle").textContent = "# " + currentCh;
+  $("#chTitle").textContent = currentCh;
   $("#chatHeadCh").textContent = currentCh;
   $("#msgIn").placeholder = `#${currentCh} kanalına mesaj gönder`;
   const connecting = peers.size - online.length;
@@ -1228,7 +1268,7 @@ function render() {
   $("#meAv").outerHTML = avatar(me.name, me.color, "md", "me").replace('class="av', 'id="meAv" class="av');
   $("#meName").textContent = me.name;
   $("#muteBtn").classList.toggle("off", voice.muted);
-  $("#muteBtn").textContent = voice.muted ? "🔇" : "🎙️";
+  $("#muteBtn").innerHTML = voice.muted ? ICON.micOff : ICON.mic;
   $("#deafBtn").classList.toggle("off", voice.deaf);
   $("#voiceBar").classList.toggle("hidden", !voice.ch);
   $("#voiceWhere").textContent = voice.ch ? `${voice.ch} / ${room.name}` : "";
@@ -1240,14 +1280,14 @@ function render() {
 // Başkalarının satırında 🔊: o kişinin sesini benim tarafımda ayarla
 function voiceUser(name, color, spk, muted, deaf, screen, peer) {
   const v = peer && volOf(peer);
-  const volBtn = peer ? `<button class="volBtn" data-vol="${peer.id}" title="Ses ayarı · Volume">${v.mute ? "🔇" : "🔊"}</button>` : "";
-  return `<div class="vu">${avatar(name, color, "sm", spk)}<span>${esc(name)}</span><span class="icons">${screen ? "🖥️" : ""}${muted ? "🎙️✕" : ""}${deaf ? "🎧" : ""}</span>${volBtn}</div>`;
+  const volBtn = peer ? `<button class="volBtn" data-vol="${peer.id}" title="Ses ayarı · Volume">${v.mute ? ICON.speakerOff : ICON.speaker}</button>` : "";
+  return `<div class="vu" ${peer ? `draggable="true" data-peer="${peer.id}" title="Başka kanala sürükle"` : ""}>${avatar(name, color, "sm", spk)}<span>${esc(name)}</span><span class="icons">${screen ? `<span class="live">CANLI</span>` : ""}${muted ? ICON.micOff : ""}${deaf ? ICON.headset : ""}</span>${volBtn}</div>`;
 }
 // Başkaları sürüklenip sesli kanala bırakılabilir ya da 📞 ile çağrılabilir
 function member(name, color, inVoice, pid) {
   return `<div class="mem" ${pid ? `draggable="true" data-peer="${pid}" title="Sesli kanala sürükle"` : ""}><div class="dot">${avatar(name, color, "md")}</div>` +
-    `<div style="min-width:0"><div class="nm">${esc(name)}</div>${inVoice ? `<small>🔊 ${esc(inVoice)}</small>` : ""}</div>` +
-    (pid ? `<button class="callBtn" data-call="${pid}" title="Sesli kanala çağır">📞</button>` : "") + `</div>`;
+    `<div style="min-width:0"><div class="nm">${esc(name)}</div>${inVoice ? `<small>${ICON.speaker} ${esc(inVoice)}</small>` : ""}</div>` +
+    (pid ? `<button class="callBtn" data-call="${pid}" title="Sesli kanala çağır">${ICON.phone}</button>` : "") + `</div>`;
 }
 function renderRail() {
   const list = store.get("lonca_servers", []);
@@ -1275,7 +1315,7 @@ function renderStage() {
       el.className = "tile";
       el.innerHTML = `<video autoplay playsinline muted></video><span></span>` +
         // Başkasının yayınında filmin sesi buradan; kendi yayınını zaten kendi sekmende duyuyorsun
-        (k !== "me" ? `<div class="tileVol" title="Video sesi · Video volume">🔊<input type="range" min="0" max="1" step="0.05"></div>` : "");
+        (k !== "me" ? `<div class="tileVol" title="Video sesi · Video volume">${ICON.speaker}<input type="range" min="0" max="1" step="0.05"></div>` : "");
       const tv = el.querySelector(".tileVol");
       if (tv) {
         tv.onclick = (e) => e.stopPropagation();   // tıklayınca film moduna geçmesin
@@ -1343,7 +1383,7 @@ function renderMessages(toBottom) {
     }
     prev = m;
   }
-  box.innerHTML = html || `<div class="empty"><h2>#${esc(currentCh)} kanalına hoş geldin</h2>Burası bu kanalın başlangıcı. İlk mesajı sen yaz!</div>`;
+  box.innerHTML = html || `<div class="empty"><div class="hashBig">#</div><h2>#${esc(currentCh)} kanalına hoş geldin</h2>Burası bu kanalın başlangıcı. İlk mesajı sen yaz!</div>`;
   if (atBottom) box.scrollTop = box.scrollHeight;
 }
 const linkify = (s) => s.replace(/https?:\/\/[^\s<]+/g, (u) => `<a href="${u}" target="_blank" rel="noopener noreferrer">${u}</a>`);
@@ -1479,7 +1519,7 @@ function callToVoice(pid, ch) {
   if (!p?.ready) return;
   if (!voice.ch) joinVoice(ch);
   sendTo(p, { t: "call", ch });
-  toast(`${p.state.name} → 🔊 ${ch} kanalına çağrıldı`);
+  toast(`${p.state.name} → 🔊 ${ch} kanalına ${p.state.voice ? "taşındı" : "çağrıldı"}`);
 }
 let callCh = null;
 function showCall(name, ch) {
@@ -1492,12 +1532,19 @@ function showCall(name, ch) {
 }
 $("#callJoin").onclick = () => { $("#callCard").classList.add("hidden"); if (callCh) joinVoice(callCh); };
 $("#callLater").onclick = () => $("#callCard").classList.add("hidden");
-$("#members").addEventListener("dragstart", (e) => {
+var draggingPeer = false;
+function startPeerDrag(e) {
   const el = e.target.closest("[data-peer]");
   if (!el) return;
   e.dataTransfer.setData("text/lonca-peer", el.dataset.peer);
   e.dataTransfer.effectAllowed = "move";
-});
+  draggingPeer = true;
+}
+function endPeerDrag() { draggingPeer = false; render(); }
+for (const box of [$("#members"), $("#chans")]) {
+  box.addEventListener("dragstart", startPeerDrag);
+  box.addEventListener("dragend", endPeerDrag);
+}
 $("#members").addEventListener("click", (e) => {
   const b = e.target.closest("[data-call]");
   if (b) callToVoice(b.dataset.call, voice.ch || channels("voice")[0]);
@@ -1674,9 +1721,15 @@ function showLanding() {
   $("#landing").classList.remove("hidden");
   const list = store.get("lonca_servers", []);
   $("#savedSrvs").innerHTML = list.length
-    ? `<p style="margin-bottom:8px">Your servers</p>` + list.map((s) => `<button class="btn ghost" style="width:100%;margin-bottom:6px" data-srv="${esc(s.key)}">${esc(s.name)}</button>`).join("")
+    ? `<p style="margin-bottom:8px">Your servers</p>` + list.map((s) => `<div class="savedRow"><button class="btn ghost" data-srv="${esc(s.key)}">${esc(s.name)}</button><button class="savedX" data-del="${esc(s.key)}" title="Listeden çıkar · Remove">×</button></div>`).join("")
     : "";
   $("#savedSrvs").onclick = (e) => {
+    const del = list.find((x) => x.key === e.target.dataset.del);
+    if (del) {
+      if (!confirm(`Remove "${del.name}" from your list? Its messages stay on this device.`)) return;
+      store.set("lonca_servers", list.filter((x) => x !== del));
+      return showLanding();
+    }
     const s = list.find((x) => x.key === e.target.dataset.srv);
     if (s) location.hash = linkHash(s);
   };
