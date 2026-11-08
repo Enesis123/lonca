@@ -72,7 +72,6 @@ label.chk input{width:auto}
 .av.speak{box-shadow:0 0 0 3px var(--ok)}
 .av{overflow:hidden}
 .av img{width:100%;height:100%;object-fit:cover;display:block}
-#nameForm{max-height:calc(100dvh - 32px);overflow-y:auto}
 #avPick small{display:block;color:var(--dim);margin:8px 0 4px}
 .avGrid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
 .avGrid button{aspect-ratio:1;border-radius:50%;overflow:hidden;background:var(--hover);display:grid;place-items:center;font-size:18px;color:var(--dim)}
@@ -85,7 +84,7 @@ label.chk input{width:auto}
 #voiceBar .st{color:var(--ok);font-weight:600;font-size:14px}
 #voiceBar .sub{color:var(--dim);font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #voiceBar .row{display:flex;gap:6px;margin-top:6px}
-#micSel{width:100%;margin-top:6px;font:inherit;font-size:13px;color:var(--txt);background:var(--rail);border:0;border-radius:4px;padding:5px 6px}
+#micSel,#camSel{width:100%;margin-top:6px;font:inherit;font-size:13px;color:var(--txt);background:var(--rail);border:0;border-radius:4px;padding:5px 6px}
 #gateRow{margin-top:6px}
 #gateRow small{color:var(--dim);font-size:12px}
 .gateWrap{position:relative;height:18px;background:var(--rail);border-radius:4px;overflow:hidden}
@@ -111,7 +110,7 @@ label.chk input{width:auto}
 #menuBtn{display:none}
 #stage{display:flex;gap:8px;padding:8px;background:#000;flex-wrap:wrap;justify-content:center;max-height:55%;flex:none}
 .tile{position:relative;flex:1 1 320px;max-width:100%;background:#111;border-radius:8px;overflow:hidden;cursor:zoom-in;aspect-ratio:16/9}
-.tile video{width:100%;height:100%;object-fit:contain;display:block}
+.tile video{width:100%;height:100%;object-fit:var(--fit,contain);display:block}
 .tile.mirror video{transform:scaleX(-1)}
 .tile span{position:absolute;left:8px;bottom:8px;background:#000a;padding:2px 8px;border-radius:6px;font-size:13px}
 /* Ekran paylaşımı varken yayın ortada, sohbet sağ kenarda; 💬 ile gizlenir */
@@ -119,7 +118,7 @@ label.chk input{width:auto}
 #chat{flex:1;display:flex;flex-direction:column;min-height:0;min-width:0}
 #body.sharing{flex-direction:row}
 #body.sharing #stage{flex:1;max-height:none;align-content:center;overflow:auto}
-#body.sharing #chat{flex:0 0 340px;border-left:1px solid var(--panel)}
+#body.sharing #chat{flex:0 0 var(--chatW,340px)}
 #body.sharing.noChat #chat{display:none}
 /* Film modu: yayın tam ekran, sohbet köşede yarı saydam */
 #theaterBar{display:none}
@@ -152,9 +151,6 @@ label.chk input{width:auto}
 #trBtn{font-size:12px;font-weight:700;border-radius:6px;padding:4px 7px;color:var(--dim);border:1px solid var(--line);white-space:nowrap}
 #trBtn.on{background:var(--acc);color:#fff;border-color:var(--acc)}
 #composer{position:relative}
-#trMenu{position:absolute;right:0;bottom:calc(100% + 6px);background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px;
-  display:flex;flex-direction:column;gap:10px;width:240px;z-index:5;box-shadow:0 8px 24px #0009}
-#trMenu select{font:inherit;color:var(--txt);background:var(--side);border:1px solid var(--line);border-radius:8px;padding:8px}
 #chatToggle{margin-left:4px}
 #chatToggle.on{background:var(--acc);color:#fff}
 #msgs{flex:1;overflow-y:auto;padding:10px 0 4px}
@@ -224,6 +220,33 @@ label{font-size:13px;color:var(--dim);display:flex;flex-direction:column;gap:6px
 #toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:#111;padding:10px 16px;border-radius:8px;z-index:30;box-shadow:0 6px 20px #0008}
 #dropHint{position:fixed;inset:0;background:#5865f233;border:4px dashed var(--acc);z-index:15;display:grid;place-items:center;font-size:24px;font-weight:700;pointer-events:none}
 
+#netOver{z-index:29}
+#nameOver{position:fixed;inset:0;z-index:28;display:grid;grid-template-columns:minmax(200px,30%) 1fr;background:var(--main)}
+#setNav{background:var(--side);padding:48px 12px 24px;display:flex;flex-direction:column;gap:2px;align-items:flex-end;overflow-y:auto}
+#setNav b{width:min(200px,100%);padding:0 10px 6px;color:var(--dim);font-size:12px;font-weight:600;text-transform:uppercase}
+#setNav button{width:min(200px,100%);padding:7px 10px;border-radius:4px;text-align:left;color:var(--dim);font-weight:500}
+#setNav button:hover{background:var(--hover);color:var(--txt)}
+#setNav button.on{background:#404249;color:#fff}
+#setBody{position:relative;overflow-y:auto;padding:48px 72px 48px 40px}
+#setBody section,#nameForm{max-width:560px;display:flex;flex-direction:column;gap:14px}
+#setBody h2{margin:0}
+#setBody h3{margin:6px 0 0;font-size:15px}
+#setBody p{margin:0;color:var(--dim);font-size:14px}
+#setBody select{font:inherit;color:var(--txt);background:var(--rail);border:0;border-radius:4px;padding:10px;margin:0;width:100%}
+#setClose{position:absolute;right:24px;top:44px;width:36px;height:36px;border-radius:50%;border:2px solid var(--dim);color:var(--dim);font-size:18px}
+#setClose:hover{background:var(--hover);color:#fff}
+#nameOver.first{grid-template-columns:1fr}
+#nameOver.first #setNav,#nameOver.first #setClose{display:none}
+#nameOver.first section{margin:0 auto}
+#splitter{display:none}
+#body.sharing:not(.noChat):not(.theater) #splitter{display:block;flex:0 0 6px;cursor:col-resize;background:var(--panel);touch-action:none}
+#splitter:hover,#splitter.on{background:var(--acc)!important}
+#body.sharing #stage.one{padding:0;gap:0;align-content:stretch}
+#body.sharing #stage.one .tile{flex:1 1 100%;aspect-ratio:auto;border-radius:0}
+#stage.one .tile video{position:absolute;inset:0}
+.tileFit{position:absolute;right:8px;bottom:8px;width:30px;height:30px;border-radius:6px;background:#000a;color:#fff;font-size:16px}
+.tileFit:hover{background:var(--acc)}
+#body.theater .tileFit{right:auto;left:8px;bottom:40px}
 @media (max-width:1000px){#app{grid-template-columns:72px 240px 1fr}#members{display:none}}
 @media (max-width:700px){
   #app{grid-template-columns:1fr}
@@ -237,6 +260,14 @@ label{font-size:13px;color:var(--dim);display:flex;flex-direction:column;gap:6px
   #body.sharing{flex-direction:column}
   #body.sharing #stage{flex:none;max-height:45%}
   #body.sharing #chat{flex:1 1 auto;border-left:0}
+  #splitter{display:none!important}
+  #body.sharing #stage.one .tile{aspect-ratio:16/9}
+  #nameOver{grid-template-columns:1fr;grid-template-rows:auto 1fr}
+  #setNav{flex-direction:row;overflow-x:auto;padding:10px 52px 10px 10px;align-items:center}
+  #setNav b{display:none}
+  #setNav button{width:auto;white-space:nowrap;flex:none}
+  #setBody{padding:20px 16px}
+  #setClose{position:fixed;right:8px;top:6px;z-index:1;background:var(--main)}
 }
 </style>
 </head>
@@ -256,27 +287,24 @@ label{font-size:13px;color:var(--dim);display:flex;flex-direction:column;gap:6px
 <div id="app" class="hidden">
   <nav id="rail"></nav>
   <aside id="side">
-    <div id="srvHead"><span id="srvName"></span><button class="pill" id="inviteBtn">Davet et</button></div>
+    <div id="srvHead"><span id="srvName"></span><button class="pill" id="inviteBtn">Invite</button></div>
     <div id="chans"></div>
     <div id="voiceBar" class="hidden">
       <div class="vtop">
-        <div><div class="st">Ses Bağlı</div><div class="sub" id="voiceWhere"></div></div>
-        <button class="ibtn" id="leaveBtn" title="Bağlantıyı kes" data-i="callEnd"></button>
+        <div><div class="st">Voice Connected</div><div class="sub" id="voiceWhere"></div></div>
+        <button class="ibtn" id="leaveBtn" title="Disconnect" data-i="callEnd"></button>
       </div>
-      <select id="micSel" title="Mikrofon"></select>
-      <div id="gateRow" title="Çubuk yeşile dönünce sesin gider. Arka plan sesi gidiyorsa sağa çek."><small>Mikrofon eşiği</small>
-        <div class="gateWrap"><div id="gateLvl"></div><input type="range" id="gateIn" min="-70" max="-20" step="1"></div></div>
       <div class="row">
-        <button class="vbtn" id="camBtn" title="Kamerayı aç / kapat" data-i="cam">Kamera</button>
-        <button class="vbtn" id="screenBtn" title="Pencere, ekran ya da sekme paylaş" data-i="screen">Ekran</button>
+        <button class="vbtn" id="camBtn" title="Turn camera on / off" data-i="cam">Camera</button>
+        <button class="vbtn" id="screenBtn" title="Share a window, screen or tab" data-i="screen">Screen</button>
       </div>
     </div>
     <div id="mePanel">
       <div class="av md" id="meAv"></div>
       <div class="nm" id="meName"></div>
-      <button class="ibtn" id="muteBtn" title="Mikrofonu kapat"></button>
-      <button class="ibtn" id="deafBtn" title="Sesi kapat" data-i="headset"></button>
-      <button class="ibtn" id="setBtn" title="Ayarlar" data-i="gear"></button>
+      <button class="ibtn" id="muteBtn" title="Mute microphone"></button>
+      <button class="ibtn" id="deafBtn" title="Deafen" data-i="headset"></button>
+      <button class="ibtn" id="setBtn" title="Settings" data-i="gear"></button>
     </div>
   </aside>
   <main id="main">
@@ -284,28 +312,25 @@ label{font-size:13px;color:var(--dim);display:flex;flex-direction:column;gap:6px
       <button class="ibtn" id="menuBtn">☰</button>
       <b id="chTitle"></b>
       <span id="netInfo"></span>
-      <button class="ibtn" id="netBtn" title="Bağlantı günlüğü · Connection log" data-i="plug"></button>
-      <button class="ibtn" id="clearBtn" title="Kanalı temizle · Clear channel" data-i="trash"></button>
-      <button class="ibtn hidden" id="chatToggle" title="Sohbeti gizle / göster (C)" data-i="chat"></button>
+      <button class="ibtn" id="netBtn" title="Connection log" data-i="plug"></button>
+      <button class="ibtn" id="clearBtn" title="Clear channel" data-i="trash"></button>
+      <button class="ibtn hidden" id="chatToggle" title="Hide / show chat (C)" data-i="chat"></button>
     </div>
     <div id="body">
       <div id="theaterBar">
-        <button id="tChat" title="Sohbeti gizle / göster (C)">💬 Sohbet</button>
-        <button id="tExit" title="Film modundan çık (Esc)">✕</button>
+        <button id="tChat" title="Hide / show chat (C)">💬 Chat</button>
+        <button id="tExit" title="Exit movie mode (Esc)">✕</button>
       </div>
       <div id="stage" class="hidden"></div>
+      <div id="splitter" title="Drag to resize"></div>
       <div id="chat">
         <div id="chatHead"><span>💬 #<b id="chatHeadCh"></b></span>
-          <button id="miniBtn" title="Küçült / büyüt">–</button><button id="hideBtn" title="Gizle (C)">×</button></div>
+          <button id="miniBtn" title="Minimize / expand">–</button><button id="hideBtn" title="Hide (C)">×</button></div>
         <div id="msgs"></div>
         <form id="composer">
-          <button type="button" id="attachBtn" title="Dosya ekle" data-i="plus"></button>
+          <button type="button" id="attachBtn" title="Add file" data-i="plus"></button>
           <input type="text" id="msgIn" maxlength="4000" autocomplete="off">
           <button type="button" id="trBtn"></button>
-          <div id="trMenu" class="hidden">
-            <label>Yazdığım dil · I write in<select id="trFrom"></select></label>
-            <label>Şu dile çevir · Translate to<select id="trTo"></select></label>
-          </div>
           <input type="file" id="fileIn" multiple hidden>
         </form>
         <div id="typing"></div>
@@ -315,53 +340,99 @@ label{font-size:13px;color:var(--dim);display:flex;flex-direction:column;gap:6px
   <aside id="members"></aside>
 </div>
 
-<div id="nameOver" class="over hidden">
-  <form class="card" id="nameForm">
-    <h2>Your profile</h2>
-    <label>Nickname<input id="nameIn" maxlength="32" required></label>
-    <label>Color<div class="colors" id="colorPick"></div></label>
-    <div><label>Profile picture · Profil resmi</label><div id="avPick"></div></div>
-    <button type="button" class="btn ghost" id="avUpload">Upload photo or GIF · Resim ya da GIF yükle</button>
-    <input type="file" id="avFile" accept="image/gif,image/png,image/jpeg,image/webp" hidden>
-    <details><summary style="color:var(--dim);font-size:13px;cursor:pointer">Advanced: TURN server</summary>
-      <p style="margin:8px 0">Some mobile networks can't connect directly and need a TURN server. Invite links already include one, so you can leave this empty.</p>
+<div id="nameOver" class="hidden">
+  <nav id="setNav">
+    <b>Settings</b>
+    <button type="button" data-tab="profile">Profile</button>
+    <button type="button" data-tab="voice">Voice &amp; Video</button>
+    <button type="button" data-tab="lang">Language &amp; Translation</button>
+    <button type="button" data-tab="sound">Sounds</button>
+    <button type="button" data-tab="net">Connection</button>
+    <button type="button" data-tab="server">This server</button>
+  </nav>
+  <div id="setBody">
+    <button type="button" id="setClose" title="Close (Esc)">×</button>
+    <section data-pane="profile">
+      <form id="nameForm">
+        <h2>Your profile</h2>
+        <label>Nickname<input id="nameIn" maxlength="32" required></label>
+        <label>Color<div class="colors" id="colorPick"></div></label>
+        <div><label>Profile picture</label><div id="avPick"></div></div>
+        <button type="button" class="btn ghost" id="avUpload">Upload photo or GIF</button>
+        <input type="file" id="avFile" accept="image/gif,image/png,image/jpeg,image/webp" hidden>
+        <button class="btn">Save</button>
+      </form>
+    </section>
+    <section data-pane="voice" class="hidden">
+      <h2>Voice &amp; Video</h2>
+      <label>Microphone<select id="micSel"></select></label>
+      <label>Camera<select id="camSel"></select></label>
+      <div id="gateRow" title="Your voice goes through when the bar turns green. If background noise gets through, drag right."><small>Mic sensitivity</small>
+        <div class="gateWrap"><div id="gateLvl"></div><input type="range" id="gateIn" min="-70" max="-20" step="1"></div></div>
+      <p>Join a voice channel to see your mic level here.</p>
+      <label>Stream fit<select id="fitSel">
+        <option value="contain">Fit (whole picture, may have black bars)</option>
+        <option value="cover">Fill (no gaps, crops edges)</option>
+        <option value="fill">Stretch (no gaps, distorts)</option>
+      </select></label>
+    </section>
+    <section data-pane="lang" class="hidden">
+      <h2>Language &amp; Translation</h2>
+      <label>App language<select id="langSel"></select></label>
+      <label>I write in<select id="trFrom"></select></label>
+      <label>Translate to<select id="trTo"></select></label>
+    </section>
+    <section data-pane="sound" class="hidden">
+      <h2>Sounds</h2>
+      <label class="chk"><input type="checkbox" id="sfxOn"> Interface sounds</label>
+      <p>Play sounds for joining, leaving, muting and messages.</p>
+    </section>
+    <section data-pane="net" class="hidden">
+      <h2>Connection</h2>
+      <h3>Advanced: TURN server</h3>
+      <p>Some mobile networks can't connect directly and need a TURN server. Invite links already include one, so you can leave this empty.</p>
       <label>Address (comma-separated)<input id="turnUrl" placeholder="turn:example.com:3478"></label>
       <label>Username<input id="turnUser"></label>
       <label>Password<input id="turnPass" type="password"></label>
-    </details>
-    <button class="btn">Save</button>
-    <button type="button" class="btn ghost hidden" id="leaveSrv">Remove this server from my list</button>
-  </form>
+      <p>Changes are saved when you close this page.</p>
+      <button type="button" class="btn ghost" id="setNetLog">Open connection log</button>
+    </section>
+    <section data-pane="server" class="hidden">
+      <h2>This server</h2>
+      <p id="setSrvName"></p>
+      <button type="button" class="btn ghost hidden" id="leaveSrv">Remove this server from my list</button>
+    </section>
+  </div>
 </div>
 
 <div id="volPop" class="hidden">
   <b id="volName"></b>
-  <label>Konuşma sesi · Voice<input type="range" id="volVoice" min="0" max="1" step="0.05"></label>
-  <label id="volFilmRow">Paylaşılan video sesi · Video<input type="range" id="volFilm" min="0" max="1" step="0.05"></label>
-  <label class="chk"><input type="checkbox" id="volMute"> Sustur · Mute</label>
-  <small id="volIos" class="hidden" style="color:var(--dim)">iPhone'da seviye telefonun tuşlarıyla ayarlanır; burada en sola çekmek kapatır.</small>
+  <label>Voice volume<input type="range" id="volVoice" min="0" max="1" step="0.05"></label>
+  <label id="volFilmRow">Shared video volume<input type="range" id="volFilm" min="0" max="1" step="0.05"></label>
+  <label class="chk"><input type="checkbox" id="volMute"> Mute</label>
+  <small id="volIos" class="hidden" style="color:var(--dim)">On iPhone, volume is set with the phone's buttons; dragging all the way left turns it off.</small>
 </div>
-<button id="updateBtn" class="btn hidden" style="position:fixed;right:16px;top:60px;z-index:31;box-shadow:0 8px 24px #000a">🔄 Yeni sürüm hazır · Yenile</button>
-<button id="soundBtn" class="btn hidden" style="position:fixed;left:50%;bottom:90px;transform:translateX(-50%);z-index:31;box-shadow:0 8px 24px #000a">🔊 Sesi açmak için dokun · Tap to enable sound</button>
+<button id="updateBtn" class="btn hidden" style="position:fixed;right:16px;top:60px;z-index:31;box-shadow:0 8px 24px #000a">🔄 New version ready · Reload</button>
+<button id="soundBtn" class="btn hidden" style="position:fixed;left:50%;bottom:90px;transform:translateX(-50%);z-index:31;box-shadow:0 8px 24px #000a">🔊 Tap to enable sound</button>
 <div id="netOver" class="over hidden">
   <div class="card" style="width:min(560px,100%)">
-    <h2>Bağlantı günlüğü · Connection log</h2>
+    <h2>Connection log</h2>
     <p id="netHead"></p>
     <pre id="netText" style="margin:0;max-height:50vh;overflow:auto;background:var(--panel);border-radius:8px;padding:10px;font-size:12px;white-space:pre-wrap"></pre>
     <div style="display:flex;gap:8px">
-      <button class="btn" id="netRetry" style="flex:1">Yeniden bağlan · Reconnect</button>
-      <button class="btn ghost" id="netCopy">Kopyala · Copy</button>
-      <button class="btn ghost" id="netClose">Kapat</button>
+      <button class="btn" id="netRetry" style="flex:1">Reconnect</button>
+      <button class="btn ghost" id="netCopy">Copy</button>
+      <button class="btn ghost" id="netClose">Close</button>
     </div>
   </div>
 </div>
 <div id="callCard" class="hidden">
   <div id="callText"></div>
-  <div class="row"><button class="btn" id="callJoin">Katıl · Join</button><button class="btn ghost" id="callLater">Sonra · Later</button></div>
+  <div class="row"><button class="btn" id="callJoin">Join</button><button class="btn ghost" id="callLater">Later</button></div>
 </div>
 <div id="lightbox" class="over hidden"></div>
 <div id="toast" class="hidden"></div>
-<div id="dropHint" class="hidden">Bırak, gönderilsin</div>
+<div id="dropHint" class="hidden">Drop to send</div>
 
 <script>
 "use strict";
@@ -370,11 +441,216 @@ label{font-size:13px;color:var(--dim);display:flex;flex-direction:column;gap:6px
 // Asıl trafik (yazı, ses, ekran, dosya): tarayıcılar arası WebRTC, herkes herkese bağlı (mesh).
 
 // Her yayında artır: açık sayfalar yeni sürümü görüp kendini yeniler (GitHub Pages 10 dk önbellekliyor)
-const VERSION = "18";
+const VERSION = "19";
 const RELAY = "https://ntfy.sh/";
 const STUN = [{ urls: ["stun:stun.l.google.com:19302", "stun:stun.cloudflare.com:3478"] }];
 const DEFAULT_TEXT = ["genel", "oyun", "medya"];
 const DEFAULT_VOICE = ["Sesli Sohbet", "Oyun Odası"];
+
+// ---------- Dil ----------
+// Arayüz açanın sistem dilinde: metinler kodda İngilizce, TR elle çevrili, diğer diller ilk açılışta
+// otomatik çevrilip cihazda saklanır. Kanal adları eşler arası kimlik olduğu için yalnız görünürken çevrilir.
+const savedLang = (() => { try { return localStorage.getItem("lonca_lang"); } catch { return null; } })();
+const SYS_LANG = new URLSearchParams(location.search).get("lang") || savedLang || navigator.language || "en";
+const LANG = SYS_LANG.slice(0, 2).toLowerCase();
+const TR = {
+  "Text, voice and screen-share chat with your friends. No servers in between: everyone connects directly and everything is encrypted.": "Arkadaşlarınla yazılı, sesli ve ekran paylaşımlı sohbet. Arada sunucu yok: herkes doğrudan bağlanır, her şey şifrelidir.",
+  "Server name": "Sunucu adı",
+  "e.g. Movie Night": "örn. Film Gecesi",
+  "Create server": "Sunucu oluştur",
+  "Got an invite link? Just open it, you don't need this page.": "Davet bağlantın mı var? Açman yeterli, bu sayfaya gerek yok.",
+  "Your servers": "Sunucuların",
+  "Invite": "Davet et",
+  "Voice Connected": "Ses Bağlı",
+  "Disconnect": "Bağlantıyı kes",
+  "Microphone": "Mikrofon",
+  "Camera": "Kamera",
+  "Screen": "Ekran",
+  "Mic sensitivity": "Mikrofon eşiği",
+  "Your voice goes through when the bar turns green. If background noise gets through, drag right.": "Çubuk yeşile dönünce sesin gider. Arka plan sesi gidiyorsa sağa çek.",
+  "Turn camera on / off": "Kamerayı aç / kapat",
+  "Share a window, screen or tab": "Pencere, ekran ya da sekme paylaş",
+  "Mute microphone": "Mikrofonu kapat",
+  "Deafen": "Sesi kapat",
+  "Settings": "Ayarlar",
+  "Connection log": "Bağlantı günlüğü",
+  "Clear channel": "Kanalı temizle",
+  "Hide / show chat (C)": "Sohbeti gizle / göster (C)",
+  "💬 Chat": "💬 Sohbet",
+  "💬 Hide chat": "💬 Sohbeti gizle",
+  "💬 Show chat": "💬 Sohbeti aç",
+  "Exit movie mode (Esc)": "Film modundan çık (Esc)",
+  "Minimize / expand": "Küçült / büyüt",
+  "Hide (C)": "Gizle (C)",
+  "Add file": "Dosya ekle",
+  "I write in": "Yazdığım dil",
+  "Translate to": "Şu dile çevir",
+  "Your profile": "Profilin",
+  "Nickname": "Takma ad",
+  "Color": "Renk",
+  "Profile picture": "Profil resmi",
+  "Upload photo or GIF": "Resim ya da GIF yükle",
+  "Funny": "Komik",
+  "Serious": "Ciddi",
+  "Weird": "Değişik",
+  "No picture": "Resimsiz",
+  "Your upload": "Yüklediğin",
+  "Advanced: TURN server": "Gelişmiş: TURN sunucusu",
+  "Some mobile networks can't connect directly and need a TURN server. Invite links already include one, so you can leave this empty.": "Bazı mobil ağlar doğrudan bağlanamaz ve TURN sunucusu ister. Davet bağlantılarında zaten var, boş bırakabilirsin.",
+  "Address (comma-separated)": "Adres (virgülle ayır)",
+  "Username": "Kullanıcı adı",
+  "Password": "Parola",
+  "Save": "Kaydet",
+  "Remove this server from my list": "Bu sunucuyu listemden çıkar",
+  "Voice volume": "Konuşma sesi",
+  "Shared video volume": "Paylaşılan video sesi",
+  "Mute": "Sustur",
+  "On iPhone, volume is set with the phone's buttons; dragging all the way left turns it off.": "iPhone'da seviye telefonun tuşlarıyla ayarlanır; burada en sola çekmek kapatır.",
+  "🔄 New version ready · Reload": "🔄 Yeni sürüm hazır · Yenile",
+  "🔊 Tap to enable sound": "🔊 Sesi açmak için dokun",
+  "Reconnect": "Yeniden bağlan",
+  "Copy": "Kopyala",
+  "Close": "Kapat",
+  "Join": "Katıl",
+  "Later": "Sonra",
+  "Drop to send": "Bırak, gönderilsin",
+  "This browser is blocking WebRTC, so you can't connect to anyone.\nTurn off \"WebRTC protection\" in your VPN/privacy extension and reload.": "Bu tarayıcı WebRTC bağlantılarını engelliyor, o yüzden kimseye bağlanamıyorsun.\nVPN ya da gizlilik eklentisindeki \"WebRTC koruması\"nı kapatıp sayfayı yenile.",
+  "{0} moved you to {1}": "{0} seni {1} kanalına taşıdı",
+  "Delete this message for everyone? This can't be undone.": "Bu mesaj herkesten silinsin mi? Geri alınamaz.",
+  "Delete all messages in #{0} for everyone? This can't be undone.": "#{0} kanalındaki tüm mesajlar herkesten silinsin mi? Geri alınamaz.",
+  "Voice channel name": "Sesli kanalın adı",
+  "Text channel name": "Yazı kanalının adı",
+  "{0}: can't be larger than 50 MB": "{0}: 50 MB'tan büyük olamaz",
+  "Couldn't open this microphone": "Bu mikrofon açılamadı",
+  "Couldn't get microphone permission": "Mikrofon izni alınamadı",
+  "Video sound won't be sent: tick \"Also share tab audio\" when sharing": "Video sesi gitmeyecek: paylaşırken \"sekme sesini de paylaş\"ı işaretle",
+  "Video sound isn't being sent with this share. If you need it, pick Tab and turn on its audio": "Bu paylaşımda video sesi gitmiyor. Ses gerekiyorsa Sekme'yi seçip sesini aç",
+  "Camera permission is off. Allow it from the icon in the address bar, or enable your browser in your system's camera privacy settings": "Kamera izni kapalı. Adres çubuğundaki simgeden izin ver; olmazsa Mac'te Sistem Ayarları > Gizlilik ve Güvenlik > Kamera'dan Chrome'u aç",
+  "Couldn't start the camera. Another app may be using it; close it and try again": "Kamera başlatılamadı. Başka bir uygulama kullanıyor olabilir, onu kapatıp tekrar dene",
+  "No camera found": "Kamera bulunamadı",
+  "Couldn't open camera ({0})": "Kamera açılamadı ({0})",
+  "iPhone camera couldn't be opened, this camera was used instead. Check that your iPhone is unlocked": "iPhone kamerası açılamadı, bu kamera açıldı. iPhone'un kilidini kontrol et",
+  "Text channels": "Yazı kanalları",
+  "Voice channels": "Sesli kanallar",
+  "Add channel": "Kanal ekle",
+  "Online — {0}": "Çevrimiçi — {0}",
+  "{0} (you)": "{0} (sen)",
+  "Connecting…": "Bağlanıyor…",
+  "Direct connection failed; messages go through a relay, no voice or screen": "Doğrudan bağlantı kurulamadı; yazılar aktarıcıdan gidiyor, ses/ekran yok",
+  "📨 text only": "📨 yalnız yazı",
+  "Message #{0}": "#{0} kanalına mesaj gönder",
+  "Directly connected to {0}": "{0} kişiye doğrudan bağlı",
+  "No direct connection · messages go through a relay": "Doğrudan bağlantı yok · yazılar aktarıcıdan gidiyor",
+  "Nobody online · your messages are held for 12 hours": "Kimse çevrimiçi değil · mesajların 12 saat bekletilir",
+  "{0} connecting…": "{0} bağlanıyor…",
+  "Volume": "Ses ayarı",
+  "Drag to another channel": "Başka kanala sürükle",
+  "Drag to a voice channel": "Sesli kanala sürükle",
+  "Call to voice channel": "Sesli kanala çağır",
+  "Remove from list": "Listeden çıkar",
+  "New server": "Yeni sunucu",
+  "Your screen": "Senin ekranın",
+  "Your camera": "Kameran",
+  "Video volume": "Video sesi",
+  "LIVE": "CANLI",
+  "{0} is typing…": "{0} yazıyor…",
+  "Delete message": "Mesajı sil",
+  "Welcome to #{0}": "#{0} kanalına hoş geldin",
+  "This is the start of this channel. Write the first message!": "Burası bu kanalın başlangıcı. İlk mesajı sen yaz!",
+  "Download": "İndir",
+  "Nobody online has it right now · try again": "Şu an çevrimiçi kimsede yok · tekrar dene",
+  "Receiving… {0}": "Alınıyor… {0}",
+  "Tap to get": "Almak için dokun",
+  "Couldn't open this image": "Bu resim açılamadı",
+  "Max 3 MB": "En fazla 3 MB olabilir",
+  "Remove \"{0}\" from your list? Its messages stay on this device.": "\"{0}\" listeden çıkarılsın mı? Mesaj geçmişi bu cihazda kalır.",
+  "Announced again": "Yeniden duyuruldu",
+  "Copied": "Kopyalandı",
+  "{0} pulled you into {1}. Your mic is off, turn it on to talk": "{0} seni {1} kanalına aldı. Mikrofonun kapalı, konuşmak için aç",
+  "{0} moved to {1}": "{0} → {1} kanalına taşındı",
+  "{0} called to {1}": "{0} → {1} kanalına çağrıldı",
+  "{0} is calling you to {1}": "{0} seni {1} kanalına çağırıyor",
+  "Invite link copied, send it to your friends": "Davet bağlantısı kopyalandı, arkadaşlarına gönder",
+  "Send this link to your friends:": "Bu bağlantıyı arkadaşlarına gönder:",
+  "Translate": "Çeviri",
+  "Translation languages": "Çeviri dilleri",
+  "Auto": "Otomatik",
+  "Off": "Çevirme",
+  "Translation failed, sent as typed": "Çeviri yapılamadı, yazdığın gibi gönderildi",
+  "general": "genel",
+  "games": "oyun",
+  "media": "medya",
+  "Voice Chat": "Sesli Sohbet",
+  "Game Room": "Oyun Odası",
+  "Profile": "Profil",
+  "Voice & Video": "Ses ve Görüntü",
+  "Language & Translation": "Dil ve Çeviri",
+  "Sounds": "Sesler",
+  "Connection": "Bağlantı",
+  "This server": "Bu sunucu",
+  "Close (Esc)": "Kapat (Esc)",
+  "Stream fit": "Yayın sığdırma",
+  "Fit (whole picture, may have black bars)": "Sığdır (görüntünün tamamı, siyah boşluk olabilir)",
+  "Fill (no gaps, crops edges)": "Doldur (boşluk yok, kenarlar kırpılır)",
+  "Stretch (no gaps, distorts)": "Gerdir (boşluk yok, görüntü esner)",
+  "Fit": "Sığdır",
+  "Fill": "Doldur",
+  "Stretch": "Gerdir",
+  "Change fit": "Sığdırmayı değiştir",
+  "Drag to resize": "Boyutlandırmak için sürükle",
+  "Interface sounds": "Arayüz sesleri",
+  "Play sounds for joining, leaving, muting and messages.": "Kanala giriş, çıkış, susturma ve mesajlarda ses çal.",
+  "App language": "Uygulama dili",
+  "System default": "Sistem dili",
+  "Open connection log": "Bağlantı günlüğünü aç",
+  "Join a voice channel to see your mic level here.": "Mikrofon seviyeni burada görmek için sesli kanala gir.",
+  "Changes are saved when you close this page.": "Değişiklikler bu sayfayı kapatınca kaydedilir."
+};
+let UI = {};
+function t(s, ...a) {
+  const out = (LANG === "tr" ? TR[s] : LANG === "en" ? s : UI[s]) ?? s;
+  return out.replace(/\{(\d)\}/g, (_, i) => a[i] ?? "");
+}
+const CH_EN = { genel: "general", oyun: "games", medya: "media", "Sesli Sohbet": "Voice Chat", "Oyun Odası": "Game Room" };
+const chName = (c) => (CH_EN[c] ? t(CH_EN[c]) : c);
+let i18nNodes;
+// Sayfadaki sabit metinler bir kez toplanır; sonradan gelen kullanıcı içeriğine dokunulmaz
+function applyI18n() {
+  document.documentElement.lang = LANG;
+  if (!i18nNodes) {
+    i18nNodes = [];
+    const w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    while (w.nextNode()) {
+      const k = w.currentNode.textContent.trim();
+      if (k in TR && !w.currentNode.parentElement.closest("script")) i18nNodes.push([w.currentNode, "textContent", k]);
+    }
+    for (const el of document.querySelectorAll("[title],[placeholder]")) {
+      for (const a of ["title", "placeholder"]) if (el[a] in TR) i18nNodes.push([el, a, el[a]]);
+    }
+  }
+  for (const [n, a, k] of i18nNodes) n[a] = t(k);
+}
+async function loadUiLanguage() {
+  if (LANG === "tr" || LANG === "en") return;
+  const key = "lonca_ui_" + LANG;
+  UI = store.get(key, {});
+  const todo = Object.keys(TR).filter((s) => !(s in UI));
+  if (!todo.length) return;
+  const target = LANG === "zh" ? SYS_LANG : LANG;
+  let i = 0;
+  await Promise.all(Array.from({ length: 6 }, async () => {
+    while (i < todo.length) {
+      const s = todo[i++];
+      const r = await translate(s, "en", target);
+      if (r && (s.match(/\{\d\}/g) || []).every((p) => r.includes(p))) UI[s] = r;
+    }
+  }));
+  store.set(key, UI);
+  applyI18n();
+  renderTr();
+  if (room) { render(); renderMessages(); }
+  else showLanding();
+}
 const svg = (d) => `<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="${d}"/></svg>`;
 const ICON = {
   speaker: svg("M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"),
@@ -408,7 +684,7 @@ const store = {
   set: (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
 };
 const fmtSize = (n) => n < 1024 ? n + " B" : n < 1048576 ? (n / 1024).toFixed(0) + " KB" : (n / 1048576).toFixed(1) + " MB";
-const fmtTime = (ts) => new Date(ts).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" });
+const fmtTime = (ts) => new Date(ts).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
 const dayKey = (ts) => new Date(ts).toDateString();
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -647,10 +923,7 @@ function checkNoIce(sdp) {
   nlog("⚠️ Bu tarayıcıda hiç bağlantı adayı yok: bir eklenti/VPN WebRTC'yi engelliyor");
   if (warnedNoIce) return;
   warnedNoIce = true;
-  alert("Bu tarayıcı WebRTC bağlantılarını engelliyor, o yüzden kimseye bağlanamıyorsun.\n" +
-        "VPN ya da gizlilik eklentisindeki \"WebRTC koruması\"nı kapatıp sayfayı yenile.\n\n" +
-        "This browser is blocking WebRTC, so you can't connect to anyone.\n" +
-        "Turn off \"WebRTC protection\" in your VPN/privacy extension and reload.");
+  alert(t("This browser is blocking WebRTC, so you can't connect to anyone.\nTurn off \"WebRTC protection\" in your VPN/privacy extension and reload."));
 }
 function renderNetLog() {
   const turn = store.get("lonca_turn", null);
@@ -896,7 +1169,7 @@ async function onData(p, raw) {
     case "call": {
       const ch = String(m.ch);
       if (!channels("voice").includes(ch) || voice.ch === ch) break;
-      if (voice.ch) { joinVoice(ch); toast(`${p.state.name} seni ${ch} kanalına taşıdı · moved you`); }
+      if (voice.ch) { joinVoice(ch); toast(t("{0} moved you to {1}", p.state.name, chName(ch))); }
       else pulledToVoice(p.state.name, ch);
       break;
     }
@@ -971,11 +1244,11 @@ async function publishTomb(t) {
 }
 function deleteMsg(id) {
   const m = msgs.get(id);
-  if (!m || m.uid !== me.uid || !confirm("Bu mesaj herkesten silinsin mi? Geri alınamaz.\nDelete this message for everyone?")) return;
+  if (!m || m.uid !== me.uid || !confirm(t("Delete this message for everyone? This can't be undone."))) return;
   publishTomb({ id: rid(14), kind: "del", ts: Date.now(), target: id, uid: me.uid });
 }
 function clearChannel() {
-  if (!confirm(`#${currentCh} kanalındaki tüm mesajlar herkesten silinsin mi? Geri alınamaz.\nDelete all messages in #${currentCh} for everyone?`)) return;
+  if (!confirm(t("Delete all messages in #{0} for everyone? This can't be undone.", chName(currentCh)))) return;
   publishTomb({ id: rid(14), kind: "clear", ts: Date.now(), ch: currentCh });
 }
 async function sendMsg(text, file) {
@@ -992,7 +1265,7 @@ async function sendMsg(text, file) {
   return m;
 }
 function addChannel(type) {
-  let title = prompt(type === "voice" ? "Sesli kanalın adı" : "Yazı kanalının adı");
+  let title = prompt(t(type === "voice" ? "Voice channel name" : "Text channel name"));
   if (!title) return;
   title = title.trim().slice(0, 30);
   if (type === "text") title = title.toLocaleLowerCase("tr").replace(/\s+/g, "-");
@@ -1009,7 +1282,7 @@ function channels(type) {
 // ---------- Dosyalar ----------
 async function sendFiles(files) {
   for (const f of files) {
-    if (f.size > MAX_FILE) { toast(`${f.name}: 50 MB'tan büyük olamaz`); continue; }
+    if (f.size > MAX_FILE) { toast(t("{0}: can't be larger than 50 MB", f.name)); continue; }
     const id = rid(14);
     const name = f.name || "resim.png";
     await dbPutAll("files", [{ id, blob: f, name, mime: f.type }]);
@@ -1095,6 +1368,7 @@ const SFX = {
   call: [[659, 0, .25], [523, .3, .25], [659, .6, .25], [523, .9, .35]],
 };
 function sfx(name) {
+  if (!store.get("lonca_sfx", true)) return;
   if (voice.deaf && !/mute|deaf/.test(name)) return;
   // Sayfaya hiç dokunulmadıysa AudioContext başlamaz; sesler birikip sonra birden çalmasın
   if (navigator.userActivation && !navigator.userActivation.hasBeenActive) return;
@@ -1146,10 +1420,10 @@ async function preferredMic() {
 }
 async function fillMics() {
   const mics = await listMics();
-  const cur = voice.stream?.getAudioTracks()[0]?.getSettings().deviceId;
+  const cur = voice.stream?.getAudioTracks()[0]?.getSettings().deviceId || store.get("lonca_mic", "");
   $("#micSel").innerHTML = mics.map((d, i) =>
-    `<option value="${esc(d.deviceId)}" ${d.deviceId === cur ? "selected" : ""}>🎙️ ${esc(d.label || "Mikrofon " + (i + 1))}</option>`).join("");
-  $("#micSel").classList.toggle("hidden", mics.length < 2);
+    `<option value="${esc(d.deviceId)}" ${d.deviceId === cur ? "selected" : ""}>🎙️ ${esc(d.label || t("Microphone") + " " + (i + 1))}</option>`).join("");
+  $("#micSel").closest("label").classList.toggle("hidden", !mics.length);
 }
 // Mikrofon kapısı: ses eşiğin altındayken karşıya sessizlik gider. Ölçüm ses iş parçacığında ve
 // kopya izde yapılır (kapalı iz kendi sesini de duyamaz, sekme arka plandayken zamanlayıcı yavaşlar).
@@ -1212,7 +1486,7 @@ async function switchMic(id, save = true) {
   if (save) store.set("lonca_mic", id);
   if (!voice.stream) return;
   let s;
-  try { s = await openMic(id); } catch { return toast("Bu mikrofon açılamadı"); }
+  try { s = await openMic(id); } catch { return toast(t("Couldn't open this microphone")); }
   voice.stream.getTracks().forEach((t) => t.stop());
   voice.stream = s;
   stopGate();
@@ -1233,7 +1507,7 @@ async function joinVoice(ch) {
     const id = await preferredMic();
     try { voice.stream = await openMic(id); }
     catch {
-      try { voice.stream = await openMic(""); } catch { return toast("Mikrofon izni alınamadı"); }
+      try { voice.stream = await openMic(""); } catch { return toast(t("Couldn't get microphone permission")); }
     }
     watchLevel("me", voice.stream);
     nlog("Mikrofon: " + (voice.stream.getAudioTracks()[0].label || "?"));
@@ -1274,9 +1548,9 @@ async function toggleScreen() {
   } catch { return; }
   const v = voice.screen.getVideoTracks()[0];
   v.onended = () => stopScreen();
-  if (!voice.screen.getAudioTracks().length) toast(v.getSettings().displaySurface === "browser"
-    ? "Video sesi gitmeyecek: paylaşırken \"sekme sesini de paylaş\"ı işaretle"
-    : "Bu paylaşımda video sesi gitmiyor. Ses gerekiyorsa Sekme'yi seçip sesini aç");
+  if (!voice.screen.getAudioTracks().length) toast(t(v.getSettings().displaySurface === "browser"
+    ? "Video sound won't be sent: tick \"Also share tab audio\" when sharing"
+    : "Video sound isn't being sent with this share. If you need it, pick Tab and turn on its audio"));
   sfx("live");
   pushState();
 }
@@ -1286,12 +1560,64 @@ function stopScreen(push = true) {
   voice.screen = null;
   if (push) { sfx("unlive"); pushState(); }
 }
+const CAM_ERR = {
+  NotAllowedError: "Camera permission is off. Allow it from the icon in the address bar, or enable your browser in your system's camera privacy settings",
+  NotReadableError: "Couldn't start the camera. Another app may be using it; close it and try again",
+  NotFoundError: "No camera found",
+};
+const CAM_OPTS = { width: { ideal: 640 }, height: { ideal: 360 }, frameRate: { ideal: 24 } };
+const openCamId = (id) => navigator.mediaDevices.getUserMedia({ video: id ? { ...CAM_OPTS, deviceId: { exact: id } } : CAM_OPTS });
+const listCams = async () => (await navigator.mediaDevices.enumerateDevices()).filter((d) => d.kind === "videoinput" && d.deviceId);
+// Sıra: elle seçilen, iPhone (Continuity), sonra diğerleri
+async function camOrder() {
+  const saved = store.get("lonca_cam", "");
+  const rank = (d) => (d.deviceId === saved ? 0 : /iphone/i.test(d.label) ? 1 : 2);
+  return (await listCams()).sort((x, y) => rank(x) - rank(y)).map((d) => d.deviceId);
+}
+async function openCam() {
+  let order = await camOrder();
+  let firstErr;
+  // Cihaz listesi ilk izinden sonra gelir
+  if (!order.length || !(await listCams()).some((d) => d.label)) {
+    let s = null;
+    try { s = await openCamId(); } catch (e) { firstErr = e; if (e.name === "NotAllowedError") throw e; }
+    order = await camOrder();
+    if (s && (!order.length || order[0] === s.getVideoTracks()[0].getSettings().deviceId)) return s;
+    s?.getTracks().forEach((t) => t.stop());
+  }
+  for (const id of order) {
+    try { return await openCamId(id); }
+    catch (e) { firstErr ??= e; if (e.name === "NotAllowedError") break; }
+  }
+  throw firstErr || Object.assign(new Error("yok"), { name: "NotFoundError" });
+}
+async function fillCams() {
+  const cams = await listCams();
+  const cur = voice.cam?.getVideoTracks()[0]?.getSettings().deviceId || store.get("lonca_cam", "");
+  $("#camSel").innerHTML = cams.map((d, i) =>
+    `<option value="${esc(d.deviceId)}" ${d.deviceId === cur ? "selected" : ""}>📷 ${esc(d.label || t("Camera") + " " + (i + 1))}</option>`).join("");
+  $("#camSel").closest("label").classList.toggle("hidden", !cams.length);
+  return cams;
+}
+function useCam(s) {
+  voice.cam = s;
+  s.getVideoTracks()[0].onended = () => stopCam();
+  nlog("Kamera: " + (s.getVideoTracks()[0].label || "?"));
+  pushState();
+}
 async function toggleCam() {
   if (voice.cam) return stopCam();
-  try { voice.cam = await navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 640 }, height: { ideal: 360 }, frameRate: { ideal: 24 } } }); }
-  catch { return toast("Kamera açılamadı · Couldn't open camera"); }
-  voice.cam.getVideoTracks()[0].onended = () => stopCam();
-  pushState();
+  let s;
+  try { s = await openCam(); }
+  catch (e) {
+    nlog(`Kamera hatası: ${e.name} ${e.message}`);
+    return toast(CAM_ERR[e.name] ? t(CAM_ERR[e.name]) : t("Couldn't open camera ({0})", e.name));
+  }
+  useCam(s);
+  const cams = await fillCams();
+  if (!store.get("lonca_cam", "") && cams.some((d) => /iphone/i.test(d.label)) && !/iphone/i.test(s.getVideoTracks()[0].label)) {
+    toast(t("iPhone camera couldn't be opened, this camera was used instead. Check that your iPhone is unlocked"));
+  }
 }
 function stopCam(push = true) {
   if (!voice.cam) return;
@@ -1420,12 +1746,12 @@ document.addEventListener("visibilitychange", () => {
 });
 
 // ---------- Çizim ----------
-const initial = (n) => (n || "?").trim().charAt(0).toLocaleUpperCase("tr") || "?";
+const initial = (n) => (n || "?").trim().charAt(0).toLocaleUpperCase(LANG) || "?";
 // Hazır GIF'ler avatars/ içinde; yüklenen resim dosya aktarımıyla eşlerden alınır
 const PRESET_AV = [
-  ["Funny · Komik", ["frog", "cat", "dog", "potato", "duck", "poop", "banana"]],
-  ["Serious · Ciddi", ["suit", "knight", "skull", "ninja", "fire"]],
-  ["Weird · Değişik", ["ghost", "alien", "robot", "eyeball", "ufo", "matrix"]],
+  ["Funny", ["frog", "cat", "dog", "potato", "duck", "poop", "banana"]],
+  ["Serious", ["suit", "knight", "skull", "ninja", "fire"]],
+  ["Weird", ["ghost", "alien", "robot", "eyeball", "ufo", "matrix"]],
 ];
 const MAX_AV = 3 * 1024 * 1024;
 function okAv(a) {
@@ -1458,13 +1784,13 @@ function render() {
   renderRail();
   // Kanallar
   const unread = (ch) => [...msgs.values()].some((m) => m.kind === "msg" && m.ch === ch && m.uid !== me.uid && m.ts > (lastSeen[ch] || 0));
-  let html = `<div class="cat">Yazı kanalları<button data-add="text" title="Kanal ekle">+</button></div>`;
+  let html = `<div class="cat">${t("Text channels")}<button data-add="text" title="${t("Add channel")}">+</button></div>`;
   for (const c of channels("text")) {
-    html += `<button class="ch ${c === currentCh ? "on" : ""} ${c !== currentCh && unread(c) ? "unread" : ""}" data-ch="${esc(c)}"><span class="ico">#</span>${esc(c)}</button>`;
+    html += `<button class="ch ${c === currentCh ? "on" : ""} ${c !== currentCh && unread(c) ? "unread" : ""}" data-ch="${esc(c)}"><span class="ico">#</span>${esc(chName(c))}</button>`;
   }
-  html += `<div class="cat">Sesli kanallar<button data-add="voice" title="Kanal ekle">+</button></div>`;
+  html += `<div class="cat">${t("Voice channels")}<button data-add="voice" title="${t("Add channel")}">+</button></div>`;
   for (const c of channels("voice")) {
-    html += `<button class="ch ${voice.ch === c ? "on" : ""}" data-voice="${esc(c)}"><span class="ico">${ICON.speaker}</span>${esc(c)}</button><div class="vusers" data-drop="${esc(c)}">`;
+    html += `<button class="ch ${voice.ch === c ? "on" : ""}" data-voice="${esc(c)}"><span class="ico">${ICON.speaker}</span>${esc(chName(c))}</button><div class="vusers" data-drop="${esc(c)}">`;
     if (voice.ch === c) html += voiceUser(me.name, me.color, "me", voice.muted, voice.deaf, !!voice.screen);
     for (const p of readyPeers()) {
       if (p.state.voice === c) html += voiceUser(p.state.name, p.state.color, p.id, p.state.muted, p.state.deaf, p.state.screen, p);
@@ -1476,30 +1802,30 @@ function render() {
   // Üyeler
   const online = readyPeers();
   const textOnly = relayOnlyList();
-  let mem = `<div class="cat">Çevrimiçi — ${online.length + textOnly.length + 1}</div>`;
-  mem += member(me.name + " (sen)", me.color, voice.ch);
-  for (const p of online) mem += member(p.state.name || "Bağlanıyor…", p.state.color, p.state.voice, p.id);
+  let mem = `<div class="cat">${t("Online — {0}", online.length + textOnly.length + 1)}</div>`;
+  mem += member(t("{0} (you)", me.name), me.color, voice.ch);
+  for (const p of online) mem += member(p.state.name || t("Connecting…"), p.state.color, p.state.voice, p.id);
   for (const [uid, r] of textOnly) {
-    mem += `<div class="mem" title="Doğrudan bağlantı kurulamadı; yazılar aktarıcıdan gidiyor, ses/ekran yok">${avatar(r.name, r.color, "md", "", avOf(uid))}` +
-      `<div style="min-width:0"><div class="nm">${esc(r.name)}</div><small>📨 yalnız yazı · text only</small></div></div>`;
+    mem += `<div class="mem" title="${t("Direct connection failed; messages go through a relay, no voice or screen")}">${avatar(r.name, r.color, "md", "", avOf(uid))}` +
+      `<div style="min-width:0"><div class="nm">${esc(r.name)}</div><small>${t("📨 text only")}</small></div></div>`;
   }
   $("#members").innerHTML = mem;
 
   $("#srvName").textContent = room.name;
-  $("#chTitle").textContent = currentCh;
-  $("#chatHeadCh").textContent = currentCh;
-  $("#msgIn").placeholder = `#${currentCh} kanalına mesaj gönder`;
+  $("#chTitle").textContent = chName(currentCh);
+  $("#chatHeadCh").textContent = chName(currentCh);
+  $("#msgIn").placeholder = t("Message #{0}", chName(currentCh));
   const connecting = peers.size - online.length;
-  $("#netInfo").textContent = (online.length ? `${online.length} kişiye doğrudan bağlı`
-    : textOnly.length ? "Doğrudan bağlantı yok · yazılar aktarıcıdan gidiyor"
-    : "Kimse çevrimiçi değil · mesajların 12 saat bekletilir") + (connecting ? ` · ${connecting} bağlanıyor…` : "");
+  $("#netInfo").textContent = (online.length ? t("Directly connected to {0}", online.length)
+    : textOnly.length ? t("No direct connection · messages go through a relay")
+    : t("Nobody online · your messages are held for 12 hours")) + (connecting ? " · " + t("{0} connecting…", connecting) : "");
   $("#meAv").outerHTML = avatar(me.name, me.color, "md", "me", me.av).replace('class="av', 'id="meAv" class="av');
   $("#meName").textContent = me.name;
   $("#muteBtn").classList.toggle("off", voice.muted);
   $("#muteBtn").innerHTML = voice.muted ? ICON.micOff : ICON.mic;
   $("#deafBtn").classList.toggle("off", voice.deaf);
   $("#voiceBar").classList.toggle("hidden", !voice.ch);
-  $("#voiceWhere").textContent = voice.ch ? `${voice.ch} / ${room.name}` : "";
+  $("#voiceWhere").textContent = voice.ch ? `${chName(voice.ch)} / ${room.name}` : "";
   $("#screenBtn").classList.toggle("on", !!voice.screen);
   $("#camBtn").classList.toggle("on", !!voice.cam);
   $("#screenBtn").classList.toggle("hidden", !navigator.mediaDevices?.getDisplayMedia);
@@ -1509,21 +1835,21 @@ function render() {
 // Başkalarının satırında 🔊: o kişinin sesini benim tarafımda ayarla
 function voiceUser(name, color, spk, muted, deaf, screen, peer) {
   const v = peer && volOf(peer);
-  const volBtn = peer ? `<button class="volBtn" data-vol="${peer.id}" title="Ses ayarı · Volume">${v.mute ? ICON.speakerOff : ICON.speaker}</button>` : "";
-  return `<div class="vu" ${peer ? `draggable="true" data-peer="${peer.id}" title="Başka kanala sürükle"` : ""}>${avatar(name, color, "sm", spk, peer ? peer.state.av : me.av)}<span>${esc(name)}</span><span class="icons">${screen ? `<span class="live">CANLI</span>` : ""}${(peer ? peer.state.cam : voice.cam) ? ICON.cam : ""}${muted ? ICON.micOff : ""}${deaf ? ICON.headset : ""}</span>${volBtn}</div>`;
+  const volBtn = peer ? `<button class="volBtn" data-vol="${peer.id}" title="${t("Volume")}">${v.mute ? ICON.speakerOff : ICON.speaker}</button>` : "";
+  return `<div class="vu" ${peer ? `draggable="true" data-peer="${peer.id}" title="${t("Drag to another channel")}"` : ""}>${avatar(name, color, "sm", spk, peer ? peer.state.av : me.av)}<span>${esc(name)}</span><span class="icons">${screen ? `<span class="live">${t("LIVE")}</span>` : ""}${(peer ? peer.state.cam : voice.cam) ? ICON.cam : ""}${muted ? ICON.micOff : ""}${deaf ? ICON.headset : ""}</span>${volBtn}</div>`;
 }
 // Başkaları sürüklenip sesli kanala bırakılabilir ya da 📞 ile çağrılabilir
 function member(name, color, inVoice, pid) {
-  return `<div class="mem" ${pid ? `draggable="true" data-peer="${pid}" title="Sesli kanala sürükle"` : ""}><div class="dot">${avatar(name, color, "md", "", pid ? peers.get(pid)?.state.av : me.av)}</div>` +
-    `<div style="min-width:0"><div class="nm">${esc(name)}</div>${inVoice ? `<small>${ICON.speaker} ${esc(inVoice)}</small>` : ""}</div>` +
-    (pid ? `<button class="callBtn" data-call="${pid}" title="Sesli kanala çağır">${ICON.phone}</button>` : "") + `</div>`;
+  return `<div class="mem" ${pid ? `draggable="true" data-peer="${pid}" title="${t("Drag to a voice channel")}"` : ""}><div class="dot">${avatar(name, color, "md", "", pid ? peers.get(pid)?.state.av : me.av)}</div>` +
+    `<div style="min-width:0"><div class="nm">${esc(name)}</div>${inVoice ? `<small>${ICON.speaker} ${esc(chName(inVoice))}</small>` : ""}</div>` +
+    (pid ? `<button class="callBtn" data-call="${pid}" title="${t("Call to voice channel")}">${ICON.phone}</button>` : "") + `</div>`;
 }
 function renderRail() {
   const list = store.get("lonca_servers", []);
   $("#rail").innerHTML = list.map((s) =>
     `<div class="srvWrap"><button class="srv ${s.key === room.key ? "on" : ""}" data-srv="${esc(s.key)}" title="${esc(s.name)}">${esc(initial(s.name))}</button>` +
-    `<button class="srvX" data-del="${esc(s.key)}" title="Listeden çıkar">×</button></div>`
-  ).join("") + `<div class="sep"></div><button class="srv add" data-newsrv title="Yeni sunucu">+</button>`;
+    `<button class="srvX" data-del="${esc(s.key)}" title="${t("Remove from list")}">×</button></div>`
+  ).join("") + `<div class="sep"></div><button class="srv add" data-newsrv title="${t("New server")}">+</button>`;
 }
 
 // Ekran yayınları: video öğeleri yeniden yaratılmasın diye elle eşleniyor
@@ -1531,22 +1857,22 @@ const tiles = new Map();
 function renderStage() {
   const want = new Map();
   if (voice.ch) {
-    if (voice.screen) want.set("me", { stream: voice.screen, name: "Senin ekranın" });
-    if (voice.cam) want.set("cam:me", { stream: voice.cam, name: "Kameran" });
+    if (voice.screen) want.set("me", { stream: voice.screen, name: t("Your screen") });
+    if (voice.cam) want.set("cam:me", { stream: voice.cam, name: t("Your camera") });
     for (const p of readyPeers()) {
       if (p.state.voice === voice.ch && p.state.screen && p.videoStream) want.set(p.id, { stream: p.videoStream, name: p.state.name });
       if (p.state.voice === voice.ch && p.state.cam && p.camStream) want.set("cam:" + p.id, { stream: p.camStream, name: p.state.name });
     }
   }
   for (const [k, el] of tiles) if (!want.has(k)) { el.remove(); tiles.delete(k); }
-  for (const [k, t] of want) {
+  for (const [k, item] of want) {
     let el = tiles.get(k);
     if (!el) {
       el = document.createElement("div");
       el.className = "tile" + (k === "cam:me" ? " mirror" : "");
-      el.innerHTML = `<video autoplay playsinline muted></video><span></span>` +
+      el.innerHTML = `<video autoplay playsinline muted></video><span></span><button class="tileFit" title="${t("Change fit")}">⤢</button>` +
         // Başkasının yayınında filmin sesi buradan; kendi yayınını zaten kendi sekmende duyuyorsun
-        (k !== "me" && !k.startsWith("cam:") ? `<div class="tileVol" title="Video sesi · Video volume">${ICON.speaker}<input type="range" min="0" max="1" step="0.05"></div>` : "");
+        (k !== "me" && !k.startsWith("cam:") ? `<div class="tileVol" title="${t("Video volume")}">${ICON.speaker}<input type="range" min="0" max="1" step="0.05"></div>` : "");
       const tv = el.querySelector(".tileVol");
       if (tv) {
         tv.onclick = (e) => e.stopPropagation();   // tıklayınca film moduna geçmesin
@@ -1557,8 +1883,8 @@ function renderStage() {
     }
     const v = el.querySelector("video");
     // iPhone'da srcObject atamak yetmiyor, açıkça başlatmak gerek; yoksa ilk karede donuyor
-    if (v.srcObject !== t.stream) { v.srcObject = t.stream; v.muted = true; v.play().catch(() => {}); }
-    el.querySelector("span").textContent = t.name;
+    if (v.srcObject !== item.stream) { v.srcObject = item.stream; v.muted = true; v.play().catch(() => {}); }
+    el.querySelector("span").textContent = item.name;
     const tv = el.querySelector(".tileVol");
     if (tv) {
       const peer = peers.get(k);
@@ -1568,11 +1894,12 @@ function renderStage() {
     }
   }
   $("#stage").classList.toggle("hidden", !tiles.size);
+  $("#stage").classList.toggle("one", tiles.size === 1);
   if (!tiles.size && $("#body").classList.contains("theater")) return setTheater(false);
   $("#body").classList.toggle("sharing", !!tiles.size);
   $("#chatToggle").classList.toggle("hidden", !tiles.size);
   $("#chatToggle").classList.toggle("on", !$("#body").classList.contains("noChat"));
-  $("#tChat").textContent = $("#body").classList.contains("noChat") ? "💬 Sohbeti aç" : "💬 Sohbeti gizle";
+  $("#tChat").textContent = $("#body").classList.contains("noChat") ? t("💬 Show chat") : t("💬 Hide chat");
 }
 function toggleChat() {
   $("#body").classList.toggle("noChat");
@@ -1589,7 +1916,7 @@ addEventListener("keydown", (e) => {
 function renderTyping() {
   const now = Date.now();
   const names = readyPeers().filter((p) => typing.get(p.id)?.ch === currentCh && typing.get(p.id).until > now).map((p) => p.state.name);
-  $("#typing").textContent = names.length ? `${names.join(", ")} yazıyor…` : "";
+  $("#typing").textContent = names.length ? t("{0} is typing…", names.join(", ")) : "";
 }
 setInterval(renderTyping, 1500);
 
@@ -1602,12 +1929,12 @@ function renderMessages(toBottom) {
   let html = "", prev = null;
   for (const m of list) {
     if (!prev || dayKey(prev.ts) !== dayKey(m.ts)) {
-      html += `<div class="day">${new Date(m.ts).toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" })}</div>`;
+      html += `<div class="day">${new Date(m.ts).toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" })}</div>`;
       prev = null;
     }
     const orig = origTexts[m.id] ? `<div class="orig">✎ ${esc(origTexts[m.id])}</div>` : "";
     const content = (m.text ? `<div class="txt">${linkify(esc(m.text))}</div>${orig}` : "") + (m.file ? fileHtml(m.file) : "");
-    const del = m.uid === me.uid ? `<button class="msgDel" data-delmsg="${m.id}" title="Mesajı sil · Delete">${ICON.trash}</button>` : "";
+    const del = m.uid === me.uid ? `<button class="msgDel" data-delmsg="${m.id}" title="${t("Delete message")}">${ICON.trash}</button>` : "";
     if (prev && prev.uid === m.uid && m.ts - prev.ts < 5 * 60000) {
       html += `<div class="msg cont"><div class="body">${content}</div>${del}</div>`;
     } else {
@@ -1615,7 +1942,7 @@ function renderMessages(toBottom) {
     }
     prev = m;
   }
-  box.innerHTML = html || `<div class="empty"><div class="hashBig">#</div><h2>#${esc(currentCh)} kanalına hoş geldin</h2>Burası bu kanalın başlangıcı. İlk mesajı sen yaz!</div>`;
+  box.innerHTML = html || `<div class="empty"><div class="hashBig">#</div><h2>${t("Welcome to #{0}", esc(chName(currentCh)))}</h2>${t("This is the start of this channel. Write the first message!")}</div>`;
   if (atBottom) box.scrollTop = box.scrollHeight;
 }
 const linkify = (s) => s.replace(/https?:\/\/[^\s<]+/g, (u) => `<a href="${u}" target="_blank" rel="noopener noreferrer">${u}</a>`);
@@ -1625,18 +1952,39 @@ function fileHtml(f) {
   const vid = /^video\//.test(f.mime);
   if (url && img) return `<img class="att" src="${url}" alt="${esc(f.name)}">`;
   if (url && vid) return `<video class="att" src="${url}" controls playsinline></video>`;
-  if (url) return `<a class="filecard" href="${url}" download="${esc(f.name)}">📄 <span>${esc(f.name)}</span><small>${fmtSize(f.size)} · İndir</small></a>`;
+  if (url) return `<a class="filecard" href="${url}" download="${esc(f.name)}">📄 <span>${esc(f.name)}</span><small>${fmtSize(f.size)} · ${t("Download")}</small></a>`;
   ensureFile(f);
   const st = fileStatus.get(f.id);
   const w = incoming.get(f.id);
-  const label = st === "missing" ? "Şu an çevrimiçi kimsede yok · tekrar dene"
-    : st === "loading" ? `Alınıyor… ${w?.n ? Math.round((w.got / w.n) * 100) + "%" : ""}`
-    : "Almak için dokun";
+  const label = st === "missing" ? t("Nobody online has it right now · try again")
+    : st === "loading" ? t("Receiving… {0}", w?.n ? Math.round((w.got / w.n) * 100) + "%" : "")
+    : t("Tap to get");
   return `<button class="filecard" data-get="${f.id}">${img ? "🖼️" : vid ? "🎞️" : "📄"} <span>${esc(f.name)}</span><small>${fmtSize(f.size)} · ${label}</small></button>`;
 }
 
 // ---------- Profil ----------
-function openProfile(first) {
+function showSetTab(tab) {
+  document.querySelectorAll("#setBody section").forEach((el) => el.classList.toggle("hidden", el.dataset.pane !== tab));
+  document.querySelectorAll("#setNav button").forEach((b) => b.classList.toggle("on", b.dataset.tab === tab));
+}
+$("#setNav").onclick = (e) => { if (e.target.dataset.tab) showSetTab(e.target.dataset.tab); };
+function closeSettings() {
+  if (!$("#nameIn").value.trim()) showSetTab("profile");
+  $("#nameForm").requestSubmit();
+}
+$("#setClose").onclick = closeSettings;
+addEventListener("keydown", (e) => {
+  const o = $("#nameOver");
+  if (e.key === "Escape" && !o.classList.contains("hidden") && !o.classList.contains("first")) closeSettings();
+});
+$("#setNetLog").onclick = () => { renderNetLog(); $("#netOver").classList.remove("hidden"); };
+$("#sfxOn").onchange = () => store.set("lonca_sfx", $("#sfxOn").checked);
+function openProfile(first, tab = "profile") {
+  $("#nameOver").classList.toggle("first", !!first);
+  showSetTab(first ? "profile" : tab);
+  $("#sfxOn").checked = store.get("lonca_sfx", true);
+  $("#setSrvName").textContent = room?.name || "";
+  if (!first && navigator.mediaDevices) { fillMics(); fillCams(); }
   $("#nameIn").value = me.name;
   const turn = store.get("lonca_turn", {});
   $("#turnUrl").value = [].concat(turn.urls || []).join(", ");
@@ -1652,11 +2000,11 @@ function openProfile(first) {
 let upAv = null;   // yüklenen resim: hazır GIF denerken kaybolmasın
 function paintAvPick() {
   const cell = (key, on, html, title) => `<button type="button" data-av="${key}" class="${on ? "on" : ""}" title="${title}">${html}</button>`;
-  let html = `<div class="avGrid">` + cell("", !me.av, esc(initial(me.name)), "No picture · Resimsiz");
-  if (upAv) html += cell("up", me.av?.id === upAv.id, `<img src="${avSrc(upAv)}" alt="">`, "Your upload · Yüklediğin");
+  let html = `<div class="avGrid">` + cell("", !me.av, esc(initial(me.name)), t("No picture"));
+  if (upAv) html += cell("up", me.av?.id === upAv.id, `<img src="${avSrc(upAv)}" alt="">`, t("Your upload"));
   html += `</div>`;
   for (const [title, list] of PRESET_AV) {
-    html += `<small>${title}</small><div class="avGrid">` + list.map((a) => cell(a, me.av === a, `<img src="avatars/${a}.gif" alt="${a}">`, a)).join("") + `</div>`;
+    html += `<small>${t(title)}</small><div class="avGrid">` + list.map((a) => cell(a, me.av === a, `<img src="avatars/${a}.gif" alt="${a}">`, a)).join("") + `</div>`;
   }
   $("#avPick").innerHTML = html;
 }
@@ -1681,8 +2029,8 @@ $("#avFile").onchange = async (e) => {
   if (!picked) return;
   let f;
   try { f = picked.type === "image/gif" ? picked : await squareImage(picked); }
-  catch { return toast("Bu resim açılamadı · Couldn't open this image"); }
-  if (!f || f.size > MAX_AV) return toast("En fazla 3 MB olabilir · Max 3 MB");
+  catch { return toast(t("Couldn't open this image")); }
+  if (!f || f.size > MAX_AV) return toast(t("Max 3 MB"));
   const id = rid(14);
   await dbPutAll("files", [{ id, blob: f, name: "avatar", mime: f.type }]);
   blobUrls.set(id, URL.createObjectURL(f));
@@ -1706,7 +2054,7 @@ $("#nameForm").onsubmit = (e) => {
   if (room) { pushState(); renderMessages(); }
 };
 $("#leaveSrv").onclick = () => {
-  if (!confirm(`"${room.name}" listeden çıkarılsın mı? Mesaj geçmişi bu cihazda kalır.`)) return;
+  if (!confirm(t("Remove \"{0}\" from your list? Its messages stay on this device.", room.name))) return;
   store.set("lonca_servers", store.get("lonca_servers", []).filter((s) => s.key !== room.key));
   location.hash = "";
 };
@@ -1758,7 +2106,7 @@ $("#rail").onclick = (e) => {
   if (b.dataset.del) {
     const list = store.get("lonca_servers", []);
     const s = list.find((x) => x.key === b.dataset.del);
-    if (!s || !confirm(`"${s.name}" listeden çıkarılsın mı? (Mesaj geçmişi bu cihazda kalır)`)) return;
+    if (!s || !confirm(t("Remove \"{0}\" from your list? Its messages stay on this device.", s.name))) return;
     store.set("lonca_servers", list.filter((x) => x.key !== s.key));
     if (s.key === room.key) location.hash = "";
     else renderRail();
@@ -1781,10 +2129,10 @@ $("#netRetry").onclick = () => {
   lastHello = 0;
   lastTry.clear();
   hello();
-  toast("Yeniden duyuruldu · Announced again");
+  toast(t("Announced again"));
 };
 $("#netCopy").onclick = async () => {
-  try { await navigator.clipboard.writeText($("#netHead").textContent + "\n" + netLog.join("\n")); toast("Kopyalandı · Copied"); } catch {}
+  try { await navigator.clipboard.writeText($("#netHead").textContent + "\n" + netLog.join("\n")); toast(t("Copied")); } catch {}
 };
 
 // ---------- Sesli kanala çağırma ----------
@@ -1795,24 +2143,24 @@ async function pulledToVoice(name, ch) {
   if (mic?.state !== "granted") return showCall(name, ch);
   voice.muted = true;
   await joinVoice(ch);
-  if (voice.ch === ch) toast(`${name} seni ${ch} kanalına aldı. Mikrofonun kapalı, konuşmak için aç · Your mic is muted`);
+  if (voice.ch === ch) toast(t("{0} pulled you into {1}. Your mic is off, turn it on to talk", name, chName(ch)));
 }
 function callToVoice(pid, ch) {
   const p = peers.get(pid);
   if (!p?.ready) return;
   if (!voice.ch) joinVoice(ch);
   sendTo(p, { t: "call", ch });
-  toast(`${p.state.name} → 🔊 ${ch} kanalına ${p.state.voice ? "taşındı" : "çağrıldı"}`);
+  toast(t(p.state.voice ? "{0} moved to {1}" : "{0} called to {1}", p.state.name, chName(ch)));
 }
 let callCh = null;
 function showCall(name, ch) {
   callCh = ch;
-  $("#callText").innerHTML = `📞 <b>${esc(name)}</b> seni <b>🔊 ${esc(ch)}</b> kanalına çağırıyor<br><small style="color:var(--dim)">${esc(name)} is calling you to ${esc(ch)}</small>`;
+  $("#callText").innerHTML = "📞 " + t("{0} is calling you to {1}", `<b>${esc(name)}</b>`, `<b>🔊 ${esc(chName(ch))}</b>`);
   $("#callCard").classList.remove("hidden");
   sfx("call");
   clearTimeout(showCall.timer);
   showCall.timer = setTimeout(() => $("#callCard").classList.add("hidden"), 30000);
-  if (document.hidden && window.Notification?.permission === "granted") new Notification(`📞 ${name}`, { body: `🔊 ${ch}` });
+  if (document.hidden && window.Notification?.permission === "granted") new Notification(`📞 ${name}`, { body: `🔊 ${chName(ch)}` });
 }
 $("#callJoin").onclick = () => { $("#callCard").classList.add("hidden"); if (callCh) joinVoice(callCh); };
 $("#callLater").onclick = () => $("#callCard").classList.add("hidden");
@@ -1873,9 +2221,42 @@ function setTheater(on) {
   renderStage();
 }
 $("#stage").onclick = (e) => {
+  if (e.target.closest(".tileFit")) {
+    const next = FITS[(FITS.indexOf(store.get("lonca_fit", "contain")) + 1) % FITS.length];
+    setFit(next);
+    return toast(t(FIT_NAME[next]));
+  }
   if (e.target.closest(".tile") && !$("#body").classList.contains("theater")) setTheater(true);
 };
 $("#tExit").onclick = () => setTheater(false);
+// Yayında siyah boşluklar: sığdır / doldur / gerdir
+const FITS = ["contain", "cover", "fill"], FIT_NAME = { contain: "Fit", cover: "Fill", fill: "Stretch" };
+function setFit(f) {
+  store.set("lonca_fit", f);
+  document.documentElement.style.setProperty("--fit", f);
+  $("#fitSel").value = f;
+}
+setFit(store.get("lonca_fit", "contain"));
+$("#fitSel").onchange = () => setFit($("#fitSel").value);
+// Yayın ile sohbet arasındaki ayraç
+const setChatW = (w) => $("#body").style.setProperty("--chatW", w + "px");
+setChatW(store.get("lonca_chatw", 340));
+$("#splitter").onpointerdown = (e) => {
+  const sp = $("#splitter");
+  sp.setPointerCapture(e.pointerId);
+  sp.classList.add("on");
+  let w;
+  sp.onpointermove = (m) => {
+    const box = $("#body").getBoundingClientRect();
+    w = Math.round(Math.max(220, Math.min(box.right - m.clientX, box.width * 0.7)));
+    setChatW(w);
+  };
+  sp.onpointerup = () => {
+    sp.onpointermove = sp.onpointerup = null;
+    sp.classList.remove("on");
+    if (w) store.set("lonca_chatw", w);
+  };
+};
 $("#hideBtn").onclick = () => toggleChat();
 $("#miniBtn").onclick = () => {
   const mini = $("#body").classList.toggle("mini");
@@ -1897,8 +2278,8 @@ $("#lightbox").onclick = () => $("#lightbox").classList.add("hidden");
 $("#inviteBtn").onclick = async () => {
   // ?v= önbellekteki eski sürümün açılmasını engeller
   const link = location.origin + location.pathname + "?v=" + VERSION + "#" + linkHash(room) + turnParam();
-  try { await navigator.clipboard.writeText(link); toast("Davet bağlantısı kopyalandı — arkadaşlarına gönder"); }
-  catch { prompt("Bu bağlantıyı arkadaşlarına gönder:", link); }
+  try { await navigator.clipboard.writeText(link); toast(t("Invite link copied, send it to your friends")); }
+  catch { prompt(t("Send this link to your friends:"), link); }
 };
 $("#setBtn").onclick = () => openProfile(false);
 $("#muteBtn").onclick = () => {
@@ -1915,6 +2296,16 @@ $("#deafBtn").onclick = () => {
 };
 $("#screenBtn").onclick = toggleScreen;
 $("#camBtn").onclick = toggleCam;
+$("#camSel").onchange = async () => {
+  const id = $("#camSel").value;
+  store.set("lonca_cam", id);
+  if (!voice.cam) return;
+  let s;
+  try { s = await openCamId(id); }
+  catch (e) { nlog(`Kamera hatası: ${e.name} ${e.message}`); fillCams(); return toast(CAM_ERR[e.name] ? t(CAM_ERR[e.name]) : t("Couldn't open camera ({0})", e.name)); }
+  voice.cam.getTracks().forEach((t) => t.stop());
+  useCam(s);
+};
 $("#gateRow").classList.toggle("hidden", IOS);
 $("#gateIn").value = gateDb();
 $("#gateIn").oninput = () => { store.set("lonca_gate", +$("#gateIn").value); gate.node?.port.postMessage(+$("#gateIn").value); };
@@ -1952,21 +2343,23 @@ async function translate(text, from, to) {
 const langOpts = (first, sel) => first + LANGS.map(([c, n]) => `<option value="${c}" ${c === sel ? "selected" : ""}>${n}</option>`).join("");
 function renderTr() {
   const short = (c) => c === "auto" ? "?" : c.slice(0, 2).toUpperCase();
-  $("#trBtn").textContent = tr.to ? `${short(tr.from)}→${short(tr.to)}` : "Çeviri";
+  $("#trBtn").textContent = tr.to ? `${short(tr.from)}→${short(tr.to)}` : t("Translate");
   $("#trBtn").classList.toggle("on", !!tr.to);
-  $("#trBtn").title = "Çeviri dilleri · Translation languages";
-  $("#trFrom").innerHTML = langOpts(`<option value="auto" ${tr.from === "auto" ? "selected" : ""}>Otomatik · Auto</option>`, tr.from);
-  $("#trTo").innerHTML = langOpts(`<option value="" ${!tr.to ? "selected" : ""}>Çevirme · Off</option>`, tr.to);
+  $("#trBtn").title = t("Translation languages");
+  $("#langSel").innerHTML = langOpts(`<option value="" ${!savedLang ? "selected" : ""}>${t("System default")}</option>`, savedLang);
+  $("#trFrom").innerHTML = langOpts(`<option value="auto" ${tr.from === "auto" ? "selected" : ""}>${t("Auto")}</option>`, tr.from);
+  $("#trTo").innerHTML = langOpts(`<option value="" ${!tr.to ? "selected" : ""}>${t("Off")}</option>`, tr.to);
 }
-$("#trBtn").onclick = () => $("#trMenu").classList.toggle("hidden");
+$("#trBtn").onclick = () => openProfile(false, "lang");
+$("#langSel").onchange = () => {
+  try { $("#langSel").value ? localStorage.setItem("lonca_lang", $("#langSel").value) : localStorage.removeItem("lonca_lang"); } catch {}
+  location.reload();
+};
 $("#trFrom").onchange = $("#trTo").onchange = () => {
   tr = { from: $("#trFrom").value, to: $("#trTo").value };
   store.set("lonca_tr", tr);
   renderTr();
 };
-document.addEventListener("click", (e) => {
-  if (!e.target.closest("#trMenu, #trBtn")) $("#trMenu").classList.add("hidden");
-});
 renderTr();
 
 $("#composer").onsubmit = async (e) => {
@@ -1979,7 +2372,7 @@ $("#composer").onsubmit = async (e) => {
   if (tr.to && tr.from !== tr.to) {
     const done = await translate(text, tr.from, tr.to);
     if (done) out = done.trim();
-    else toast("Çeviri yapılamadı, yazdığın gibi gönderildi · Translation failed, sent as typed");
+    else toast(t("Translation failed, sent as typed"));
   }
   const m = await sendMsg(out);
   if (out !== text) {
@@ -2016,12 +2409,12 @@ function showLanding() {
   $("#landing").classList.remove("hidden");
   const list = store.get("lonca_servers", []);
   $("#savedSrvs").innerHTML = list.length
-    ? `<p style="margin-bottom:8px">Your servers</p>` + list.map((s) => `<div class="savedRow"><button class="btn ghost" data-srv="${esc(s.key)}">${esc(s.name)}</button><button class="savedX" data-del="${esc(s.key)}" title="Listeden çıkar · Remove">×</button></div>`).join("")
+    ? `<p style="margin-bottom:8px">${t("Your servers")}</p>` + list.map((s) => `<div class="savedRow"><button class="btn ghost" data-srv="${esc(s.key)}">${esc(s.name)}</button><button class="savedX" data-del="${esc(s.key)}" title="${t("Remove from list")}">×</button></div>`).join("")
     : "";
   $("#savedSrvs").onclick = (e) => {
     const del = list.find((x) => x.key === e.target.dataset.del);
     if (del) {
-      if (!confirm(`Remove "${del.name}" from your list? Its messages stay on this device.`)) return;
+      if (!confirm(t("Remove \"{0}\" from your list? Its messages stay on this device.", del.name))) return;
       store.set("lonca_servers", list.filter((x) => x !== del));
       return showLanding();
     }
@@ -2080,6 +2473,8 @@ async function boot() {
   BROKERS.forEach(mqttConnect);
   pollMail();
 }
+applyI18n();
+loadUiLanguage();
 boot();
 </script>
 </body>
