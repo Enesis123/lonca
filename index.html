@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#1e1f22">
 <title>Lonca</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
 <style>
 :root{--rail:#1e1f22;--side:#2b2d31;--main:#313338;--panel:#232428;--line:#3f4147;--txt:#dbdee1;--dim:#949ba4;--ico:#b5bac1;--acc:#5865f2;--acc2:#4752c4;--ok:#23a55a;--bad:#f23f43;--hover:#35373c;--elev:0 1px 0 rgba(2,2,2,.2),0 1.5px 0 rgba(6,6,7,.05),0 2px 0 rgba(2,2,2,.05)}
 *{box-sizing:border-box}
@@ -340,7 +342,7 @@ label{font-size:13px;color:var(--dim);display:flex;flex-direction:column;gap:6px
 // Asıl trafik (yazı, ses, ekran, dosya): tarayıcılar arası WebRTC, herkes herkese bağlı (mesh).
 
 // Her yayında artır: açık sayfalar yeni sürümü görüp kendini yeniler (GitHub Pages 10 dk önbellekliyor)
-const VERSION = "15";
+const VERSION = "16";
 const RELAY = "https://ntfy.sh/";
 const STUN = [{ urls: ["stun:stun.l.google.com:19302", "stun:stun.cloudflare.com:3478"] }];
 const DEFAULT_TEXT = ["genel", "oyun", "medya"];
