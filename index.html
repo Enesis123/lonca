@@ -86,6 +86,12 @@ label.chk input{width:auto}
 #voiceBar .sub{color:var(--dim);font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #voiceBar .row{display:flex;gap:6px;margin-top:6px}
 #micSel{width:100%;margin-top:6px;font:inherit;font-size:13px;color:var(--txt);background:var(--rail);border:0;border-radius:4px;padding:5px 6px}
+#gateRow{margin-top:6px}
+#gateRow small{color:var(--dim);font-size:12px}
+.gateWrap{position:relative;height:18px;background:var(--rail);border-radius:4px;overflow:hidden}
+#gateLvl{position:absolute;left:0;top:0;bottom:0;width:0;background:#f0b232}
+#gateLvl.open{background:var(--ok)}
+.gateWrap input{position:absolute;left:0;top:0;margin:0;width:100%;height:100%;accent-color:#fff}
 .vbtn{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:var(--hover);border-radius:4px;padding:6px 0;font-size:14px;font-weight:500}
 .vbtn:hover{background:#40434a}
 .vbtn.on{background:var(--acc);color:#fff}
@@ -258,6 +264,8 @@ label{font-size:13px;color:var(--dim);display:flex;flex-direction:column;gap:6px
         <button class="ibtn" id="leaveBtn" title="Bağlantıyı kes" data-i="callEnd"></button>
       </div>
       <select id="micSel" title="Mikrofon"></select>
+      <div id="gateRow" title="Çubuk yeşile dönünce sesin gider. Arka plan sesi gidiyorsa sağa çek."><small>Mikrofon eşiği</small>
+        <div class="gateWrap"><div id="gateLvl"></div><input type="range" id="gateIn" min="-70" max="-20" step="1"></div></div>
       <div class="row">
         <button class="vbtn" id="camBtn" title="Kamerayı aç / kapat" data-i="cam">Kamera</button>
         <button class="vbtn" id="screenBtn" title="Pencere, ekran ya da sekme paylaş" data-i="screen">Ekran</button>
@@ -362,7 +370,7 @@ label{font-size:13px;color:var(--dim);display:flex;flex-direction:column;gap:6px
 // Asıl trafik (yazı, ses, ekran, dosya): tarayıcılar arası WebRTC, herkes herkese bağlı (mesh).
 
 // Her yayında artır: açık sayfalar yeni sürümü görüp kendini yeniler (GitHub Pages 10 dk önbellekliyor)
-const VERSION = "17";
+const VERSION = "18";
 const RELAY = "https://ntfy.sh/";
 const STUN = [{ urls: ["stun:stun.l.google.com:19302", "stun:stun.cloudflare.com:3478"] }];
 const DEFAULT_TEXT = ["genel", "oyun", "medya"];
@@ -1143,6 +1151,63 @@ async function fillMics() {
     `<option value="${esc(d.deviceId)}" ${d.deviceId === cur ? "selected" : ""}>🎙️ ${esc(d.label || "Mikrofon " + (i + 1))}</option>`).join("");
   $("#micSel").classList.toggle("hidden", mics.length < 2);
 }
+// Mikrofon kapısı: ses eşiğin altındayken karşıya sessizlik gider. Ölçüm ses iş parçacığında ve
+// kopya izde yapılır (kapalı iz kendi sesini de duyamaz, sekme arka plandayken zamanlayıcı yavaşlar).
+// Bir şey ters giderse kapı açık kalır. iPhone'da kapalı: Safari'nin ses tuhaflıkları yüzünden.
+const GATE_CODE = `registerProcessor("lonca-gate", class extends AudioWorkletProcessor {
+  constructor() { super(); this.db = -42; this.open = true; this.left = 0; this.lvl = 0; this.n = 0; this.port.onmessage = (e) => { this.db = e.data; }; }
+  process(inp) {
+    const c = inp[0][0];
+    if (!c) return true;
+    let s = 0;
+    for (const v of c) s += v * v;
+    this.lvl = Math.max(Math.sqrt(s / c.length), this.lvl * 0.95);
+    const db = 20 * Math.log10(this.lvl + 1e-6);
+    if (db >= this.db) this.left = sampleRate * 0.4;
+    else this.left -= c.length;
+    const open = this.left > 0;
+    if (open !== this.open || ++this.n >= 20) { this.n = 0; this.open = open; this.port.postMessage({ open, db }); }
+    return true;
+  }
+});`;
+const gate = { open: true, node: null, src: null, clone: null };
+let gateMod;
+const gateDb = () => store.get("lonca_gate", -42);
+function applyMic() {
+  const t = voice.stream?.getAudioTracks()[0];
+  if (t) t.enabled = !voice.muted && gate.open;
+}
+function stopGate() {
+  if (gate.node) gate.node.port.onmessage = null;
+  gate.node?.disconnect();
+  gate.src?.disconnect();
+  gate.clone?.stop();
+  gate.node = gate.src = gate.clone = null;
+  gate.open = true;
+}
+async function startGate() {
+  stopGate();
+  const stream = voice.stream;
+  if (IOS || !stream || !window.AudioWorkletNode) return;
+  try {
+    actx ??= new AudioContext();
+    gateMod ??= actx.audioWorklet.addModule(URL.createObjectURL(new Blob([GATE_CODE], { type: "text/javascript" })));
+    await gateMod;
+  } catch (e) { return console.warn("mikrofon kapısı", e); }
+  if (voice.stream !== stream) return;
+  gate.clone = stream.getAudioTracks()[0].clone();
+  gate.clone.enabled = true;
+  gate.src = actx.createMediaStreamSource(new MediaStream([gate.clone]));
+  gate.node = new AudioWorkletNode(actx, "lonca-gate");
+  gate.node.port.postMessage(gateDb());
+  gate.node.port.onmessage = ({ data }) => {
+    if (data.open !== gate.open) { gate.open = data.open; applyMic(); }
+    $("#gateLvl").style.width = Math.max(0, Math.min(100, (data.db + 70) * 2)) + "%";
+    $("#gateLvl").classList.toggle("open", data.open);
+  };
+  gate.src.connect(gate.node).connect(actx.destination);
+  actx.resume();
+}
 async function switchMic(id, save = true) {
   if (save) store.set("lonca_mic", id);
   if (!voice.stream) return;
@@ -1150,9 +1215,11 @@ async function switchMic(id, save = true) {
   try { s = await openMic(id); } catch { return toast("Bu mikrofon açılamadı"); }
   voice.stream.getTracks().forEach((t) => t.stop());
   voice.stream = s;
-  s.getAudioTracks()[0].enabled = !voice.muted;
+  stopGate();
+  applyMic();
   levels.delete("me");
   watchLevel("me", s);
+  startGate();
   readyPeers().forEach(syncMedia);   // göndericiler replaceTrack ile yeni mikrofona geçer
   fillMics();
   nlog("Mikrofon: " + (s.getAudioTracks()[0].label || "?"));
@@ -1176,8 +1243,9 @@ async function joinVoice(ch) {
       if (again && again !== voice.stream.getAudioTracks()[0].getSettings().deviceId) await switchMic(again, false);
     }
     fillMics();
+    startGate();
   }
-  voice.stream.getAudioTracks()[0].enabled = !voice.muted;
+  applyMic();
   voice.ch = ch;
   sfx("join");
   // Bu bir dokunuşun içinde: önceden gelmiş sesleri şimdi başlat
@@ -1188,6 +1256,7 @@ function leaveVoice() {
   if (voice.ch) sfx("leave");
   stopCam(false);
   stopScreen(false);
+  stopGate();
   voice.stream?.getTracks().forEach((t) => t.stop());
   voice.stream = null;
   voice.ch = null;
@@ -1834,8 +1903,7 @@ $("#inviteBtn").onclick = async () => {
 $("#setBtn").onclick = () => openProfile(false);
 $("#muteBtn").onclick = () => {
   voice.muted = !voice.muted;
-  const t = voice.stream?.getAudioTracks()[0];
-  if (t) t.enabled = !voice.muted;
+  applyMic();
   sfx(voice.muted ? "mute" : "unmute");
   pushState();
 };
@@ -1847,6 +1915,9 @@ $("#deafBtn").onclick = () => {
 };
 $("#screenBtn").onclick = toggleScreen;
 $("#camBtn").onclick = toggleCam;
+$("#gateRow").classList.toggle("hidden", IOS);
+$("#gateIn").value = gateDb();
+$("#gateIn").oninput = () => { store.set("lonca_gate", +$("#gateIn").value); gate.node?.port.postMessage(+$("#gateIn").value); };
 $("#leaveBtn").onclick = leaveVoice;
 $("#attachBtn").onclick = () => $("#fileIn").click();
 $("#fileIn").onchange = (e) => { sendFiles([...e.target.files]); e.target.value = ""; };
