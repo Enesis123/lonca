@@ -36,6 +36,7 @@ a{color:#00a8fc}
 .savedX{width:42px;flex:none;border-radius:4px;background:#4e5058;color:#fff;font-size:18px}
 .srv.add:hover{background:var(--ok);color:#fff}
 .sep{width:32px;height:2px;background:var(--line);flex:none}
+.ver{margin-top:auto;font-size:10px;color:var(--dim);flex:none}
 
 #side{background:var(--side);display:flex;flex-direction:column;min-width:0}
 #srvHead{height:48px;padding:0 14px;display:flex;align-items:center;justify-content:space-between;box-shadow:var(--elev);position:relative;z-index:1;flex:none;font-weight:600;gap:8px}
@@ -450,7 +451,7 @@ label{font-size:13px;color:var(--dim);display:flex;flex-direction:column;gap:6px
 // Asıl trafik (yazı, ses, ekran, dosya): tarayıcılar arası WebRTC, herkes herkese bağlı (mesh).
 
 // Her yayında artır: açık sayfalar yeni sürümü görüp kendini yeniler (GitHub Pages 10 dk önbellekliyor)
-const VERSION = "20";
+const VERSION = "21";
 const RELAY = "https://ntfy.sh/";
 const STUN = [{ urls: ["stun:stun.l.google.com:19302", "stun:stun.cloudflare.com:3478"] }];
 const DEFAULT_TEXT = ["genel", "oyun", "medya"];
@@ -1859,7 +1860,7 @@ function renderRail() {
   $("#rail").innerHTML = list.map((s) =>
     `<div class="srvWrap"><button class="srv ${s.key === room.key ? "on" : ""}" data-srv="${esc(s.key)}" title="${esc(s.name)}">${esc(initial(s.name))}</button>` +
     `<button class="srvX" data-del="${esc(s.key)}" title="${t("Remove from list")}">×</button></div>`
-  ).join("") + `<div class="sep"></div><button class="srv add" data-newsrv title="${t("New server")}">+</button>`;
+  ).join("") + `<div class="sep"></div><button class="srv add" data-newsrv title="${t("New server")}">+</button><small class="ver">v${VERSION}</small>`;
 }
 
 // Ekran yayınları: video öğeleri yeniden yaratılmasın diye elle eşleniyor
