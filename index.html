@@ -269,6 +269,15 @@ label{font-size:13px;color:var(--dim);display:flex;flex-direction:column;gap:6px
   #setBody{padding:20px 16px}
   #setClose{position:fixed;right:8px;top:6px;z-index:1;background:var(--main)}
 }
+/* Kamera yayının üstünde: --x/--y boş alanın oranı (0-1), pencere küçülse de taşmaz */
+#stage{position:relative;isolation:isolate}
+.tileFloat{position:absolute;right:8px;top:8px;width:30px;height:30px;border-radius:6px;background:#000a;color:#fff;font-size:16px}
+.tileFloat:hover{background:var(--acc)}
+#body.sharing #stage .tile.float{position:absolute;z-index:1;width:max(var(--w,22%),120px);height:auto;aspect-ratio:16/9;border-radius:8px;box-shadow:0 4px 16px #000a;
+  left:calc(var(--x)*100%);top:calc(var(--y)*100%);transform:translate(calc(var(--x)*-100%),calc(var(--y)*-100%));cursor:move;touch-action:none}
+.tile.float video{object-fit:cover}
+.tile.float .tileFit{display:none}
+.tile.float:hover{outline:2px solid var(--acc);outline-offset:-2px}
 </style>
 </head>
 <body>
@@ -441,7 +450,7 @@ label{font-size:13px;color:var(--dim);display:flex;flex-direction:column;gap:6px
 // Asıl trafik (yazı, ses, ekran, dosya): tarayıcılar arası WebRTC, herkes herkese bağlı (mesh).
 
 // Her yayında artır: açık sayfalar yeni sürümü görüp kendini yeniler (GitHub Pages 10 dk önbellekliyor)
-const VERSION = "19";
+const VERSION = "20";
 const RELAY = "https://ntfy.sh/";
 const STUN = [{ urls: ["stun:stun.l.google.com:19302", "stun:stun.cloudflare.com:3478"] }];
 const DEFAULT_TEXT = ["genel", "oyun", "medya"];
@@ -597,6 +606,7 @@ const TR = {
   "Fill": "Doldur",
   "Stretch": "Gerdir",
   "Change fit": "Sığdırmayı değiştir",
+  "Put over the screen / put back": "Ekranın üstüne al / geri koy",
   "Drag to resize": "Boyutlandırmak için sürükle",
   "Interface sounds": "Arayüz sesleri",
   "Play sounds for joining, leaving, muting and messages.": "Kanala giriş, çıkış, susturma ve mesajlarda ses çal.",
@@ -1854,6 +1864,61 @@ function renderRail() {
 
 // Ekran yayınları: video öğeleri yeniden yaratılmasın diye elle eşleniyor
 const tiles = new Map();
+// Yayının üstüne alınan kameralar: anahtar → {x, y}; yalnız bu cihazda geçerli
+const camFloat = new Map();
+function toggleCamFloat(k) {
+  if (camFloat.delete(k)) return;
+  camFloat.set(k, { x: Math.max(0, .98 - camFloat.size * .28), y: .96 });
+}
+// Yüzen kamerayı sürükle; konum boş alanın oranı olarak tutulur
+function dragFloat(e, k, el) {
+  if (!el.classList.contains("float") || e.target.closest("button")) return;
+  e.preventDefault();
+  el.setPointerCapture(e.pointerId);
+  const edge = floatEdge(e, el);
+  if (edge) return resizeFloat(e, k, el, edge);
+  const box = el.getBoundingClientRect(), dx = e.clientX - box.left, dy = e.clientY - box.top;
+  el.onpointermove = (m) => {
+    const s = $("#stage").getBoundingClientRect(), pos = camFloat.get(k);
+    if (!pos) return;
+    pos.x = Math.max(0, Math.min(1, (m.clientX - dx - s.left) / Math.max(1, s.width - box.width)));
+    pos.y = Math.max(0, Math.min(1, (m.clientY - dy - s.top) / Math.max(1, s.height - box.height)));
+    applyFloat(el, pos);
+  };
+  el.onpointerup = el.onpointercancel = () => { el.onpointermove = el.onpointerup = el.onpointercancel = null; };
+}
+function applyFloat(el, pos) {
+  el.style.setProperty("--x", pos.x);
+  el.style.setProperty("--y", pos.y);
+  if (pos.w) el.style.setProperty("--w", pos.w * 100 + "%");
+}
+// İmleç kenara 10 px yakınsa hangi kenarda olduğunu söyler
+function floatEdge(e, el) {
+  const box = el.getBoundingClientRect(), m = 10;
+  if (e.target.closest("button")) return null;
+  const g = { l: e.clientX - box.left < m, r: box.right - e.clientX < m, t: e.clientY - box.top < m, b: box.bottom - e.clientY < m };
+  return g.l || g.r || g.t || g.b ? g : null;
+}
+function floatCursor(e, el) {
+  const g = el.classList.contains("float") && floatEdge(e, el);
+  el.style.cursor = !g ? "" : (g.t && g.l) || (g.b && g.r) ? "nwse-resize" : (g.t && g.r) || (g.b && g.l) ? "nesw-resize" : g.l || g.r ? "ew-resize" : "ns-resize";
+}
+// Kenardan boyutlandır: karşı kenar yerinde kalır, oran 16:9, yayın alanını aşamaz
+function resizeFloat(e, k, el, g) {
+  const box = el.getBoundingClientRect(), sx = e.clientX, sy = e.clientY;
+  el.onpointermove = (m) => {
+    const s = $("#stage").getBoundingClientRect(), pos = camFloat.get(k);
+    if (!pos) return;
+    const grow = g.l ? sx - m.clientX : g.r ? m.clientX - sx : (g.t ? sy - m.clientY : m.clientY - sy) * 16 / 9;
+    const w = Math.min(s.width, s.height * 16 / 9, Math.max(120, box.width + grow)), h = w * 9 / 16;
+    const left = g.l ? box.right - w : box.left, top = g.t ? box.bottom - h : box.top;
+    pos.w = w / s.width;
+    pos.x = Math.max(0, Math.min(1, (left - s.left) / Math.max(1, s.width - w)));
+    pos.y = Math.max(0, Math.min(1, (top - s.top) / Math.max(1, s.height - h)));
+    applyFloat(el, pos);
+  };
+  el.onpointerup = el.onpointercancel = () => { el.onpointermove = el.onpointerup = el.onpointercancel = null; };
+}
 function renderStage() {
   const want = new Map();
   if (voice.ch) {
@@ -1865,12 +1930,14 @@ function renderStage() {
     }
   }
   for (const [k, el] of tiles) if (!want.has(k)) { el.remove(); tiles.delete(k); }
+  const hasScreen = [...want.keys()].some((k) => !k.startsWith("cam:"));
   for (const [k, item] of want) {
     let el = tiles.get(k);
     if (!el) {
       el = document.createElement("div");
       el.className = "tile" + (k === "cam:me" ? " mirror" : "");
       el.innerHTML = `<video autoplay playsinline muted></video><span></span><button class="tileFit" title="${t("Change fit")}">⤢</button>` +
+        (k.startsWith("cam:") ? `<button class="tileFloat" data-k="${esc(k)}" title="${t("Put over the screen / put back")}">⧉</button>` : "") +
         // Başkasının yayınında filmin sesi buradan; kendi yayınını zaten kendi sekmende duyuyorsun
         (k !== "me" && !k.startsWith("cam:") ? `<div class="tileVol" title="${t("Video volume")}">${ICON.speaker}<input type="range" min="0" max="1" step="0.05"></div>` : "");
       const tv = el.querySelector(".tileVol");
@@ -1878,9 +1945,18 @@ function renderStage() {
         tv.onclick = (e) => e.stopPropagation();   // tıklayınca film moduna geçmesin
         tv.querySelector("input").oninput = (e) => setVol(k, "film", +e.target.value);
       }
+      if (k.startsWith("cam:")) {
+        el.onpointerdown = (e) => dragFloat(e, k, el);
+        el.onmousemove = (e) => floatCursor(e, el);
+      }
       $("#stage").append(el);
       tiles.set(k, el);
     }
+    // Yayın bitince kamera normal kutucuğuna döner, yayın gelince yine üste çıkar
+    const pos = hasScreen && camFloat.get(k);
+    el.classList.toggle("float", !!pos);
+    if (pos) applyFloat(el, pos);
+    el.querySelector(".tileFloat")?.classList.toggle("hidden", !hasScreen);
     const v = el.querySelector("video");
     // iPhone'da srcObject atamak yetmiyor, açıkça başlatmak gerek; yoksa ilk karede donuyor
     if (v.srcObject !== item.stream) { v.srcObject = item.stream; v.muted = true; v.play().catch(() => {}); }
@@ -1894,7 +1970,7 @@ function renderStage() {
     }
   }
   $("#stage").classList.toggle("hidden", !tiles.size);
-  $("#stage").classList.toggle("one", tiles.size === 1);
+  $("#stage").classList.toggle("one", $("#stage").querySelectorAll(".tile:not(.float)").length === 1);
   if (!tiles.size && $("#body").classList.contains("theater")) return setTheater(false);
   $("#body").classList.toggle("sharing", !!tiles.size);
   $("#chatToggle").classList.toggle("hidden", !tiles.size);
@@ -2221,12 +2297,14 @@ function setTheater(on) {
   renderStage();
 }
 $("#stage").onclick = (e) => {
+  const floatBtn = e.target.closest(".tileFloat");
+  if (floatBtn) { toggleCamFloat(floatBtn.dataset.k); return renderStage(); }
   if (e.target.closest(".tileFit")) {
     const next = FITS[(FITS.indexOf(store.get("lonca_fit", "contain")) + 1) % FITS.length];
     setFit(next);
     return toast(t(FIT_NAME[next]));
   }
-  if (e.target.closest(".tile") && !$("#body").classList.contains("theater")) setTheater(true);
+  if (e.target.closest(".tile:not(.float)") && !$("#body").classList.contains("theater")) setTheater(true);
 };
 $("#tExit").onclick = () => setTheater(false);
 // Yayında siyah boşluklar: sığdır / doldur / gerdir
