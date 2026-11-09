@@ -216,6 +216,7 @@ label.chk input{width:auto}
 label{font-size:13px;color:var(--dim);display:flex;flex-direction:column;gap:6px}
 #landing{position:fixed;inset:0;display:grid;place-items:center;background:var(--acc);padding:16px}
 #landing h1{margin:0;font-size:32px;color:#f2f3f5;text-align:center}
+#passOver{position:fixed;inset:0;z-index:50;display:grid;place-items:center;background:var(--acc);padding:16px}
 #lightbox{cursor:zoom-out}
 #lightbox img,#lightbox video{max-width:96vw;max-height:94vh;border-radius:8px}
 #toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:#111;padding:10px 16px;border-radius:8px;z-index:30;box-shadow:0 6px 20px #0008}
@@ -288,10 +289,21 @@ label{font-size:13px;color:var(--dim);display:flex;flex-direction:column;gap:6px
     <h1>Lonca</h1>
     <p>Text, voice and screen-share chat with your friends. No servers in between: everyone connects directly and everything is encrypted.</p>
     <label>Server name<input id="newSrvName" maxlength="32" placeholder="e.g. Movie Night"></label>
+    <label>Password (optional)<input id="newSrvPass" type="password" maxlength="64" autocomplete="new-password"></label>
     <button class="btn" id="createSrv">Create server</button>
     <p>Got an invite link? Just open it, you don't need this page.</p>
     <div id="savedSrvs"></div>
   </div>
+</div>
+
+<div id="passOver" class="hidden">
+  <form class="card">
+    <h2 id="passName"></h2>
+    <p>This server is password protected.</p>
+    <label>Password<input id="passIn" type="password" maxlength="64" autocomplete="off"></label>
+    <small id="passErr" class="hidden" style="color:#f23f43">Wrong password</small>
+    <button class="btn">Enter server</button>
+  </form>
 </div>
 
 <div id="app" class="hidden">
@@ -377,6 +389,7 @@ label{font-size:13px;color:var(--dim);display:flex;flex-direction:column;gap:6px
       <h2>Voice &amp; Video</h2>
       <label>Microphone<select id="micSel"></select></label>
       <label>Camera<select id="camSel"></select></label>
+      <button class="pill hidden" id="camAllow" type="button" style="align-self:flex-start">Allow camera access</button>
       <div id="gateRow" title="Your voice goes through when the bar turns green. If background noise gets through, drag right."><small>Mic sensitivity</small>
         <div class="gateWrap"><div id="gateLvl"></div><input type="range" id="gateIn" min="-70" max="-20" step="1"></div></div>
       <p>Join a voice channel to see your mic level here.</p>
@@ -451,7 +464,7 @@ label{font-size:13px;color:var(--dim);display:flex;flex-direction:column;gap:6px
 // Asıl trafik (yazı, ses, ekran, dosya): tarayıcılar arası WebRTC, herkes herkese bağlı (mesh).
 
 // Her yayında artır: açık sayfalar yeni sürümü görüp kendini yeniler (GitHub Pages 10 dk önbellekliyor)
-const VERSION = "21";
+const VERSION = "22";
 const RELAY = "https://ntfy.sh/";
 const STUN = [{ urls: ["stun:stun.l.google.com:19302", "stun:stun.cloudflare.com:3478"] }];
 const DEFAULT_TEXT = ["genel", "oyun", "medya"];
@@ -607,6 +620,12 @@ const TR = {
   "Fill": "Doldur",
   "Stretch": "Gerdir",
   "Change fit": "Sığdırmayı değiştir",
+  "Allow camera access": "Kamera izni ver",
+  "Password (optional)": "Şifre (isteğe bağlı)",
+  "This server is password protected.": "Bu sunucu şifreli.",
+  "Password": "Şifre",
+  "Wrong password": "Yanlış şifre",
+  "Enter server": "Sunucuya gir",
   "Put over the screen / put back": "Ekranın üstüne al / geri koy",
   "Drag to resize": "Boyutlandırmak için sürükle",
   "Interface sounds": "Arayüz sesleri",
@@ -973,9 +992,9 @@ async function pollMail() {
 }
 // Doğrudan bağlanamayıp yalnız ntfy üzerinden yazışanlar da listede görünsün
 const relayOnly = new Map();   // uid -> { name, color, at }
-const RELAY_FRESH = 150000;   // "here" dakikada bir geliyor; 2,5 dk sessizse çıkmış say
+const RELAY_FRESH = 100000;   // "here" dakikada bir geliyor; bir tur kaçarsa bile 100 sn sessizse çıkmış say
 function seenOnRelay(uid, name, color) {
-  if (!uid || uid === me.uid) return;
+  if (!uid || !name || uid === me.uid) return;   // adını girmemiş kişi henüz sunucuya girmemiştir
   relayOnly.set(String(uid).slice(0, 20), { name: String(name || "?").slice(0, 32), color: okColor(color), at: Date.now() });
   render();
 }
@@ -1510,7 +1529,12 @@ async function switchMic(id, save = true) {
   nlog("Mikrofon: " + (s.getAudioTracks()[0].label || "?"));
 }
 $("#micSel").onchange = () => switchMic($("#micSel").value);
-navigator.mediaDevices?.addEventListener?.("devicechange", () => { if (voice.stream) fillMics(); });
+navigator.mediaDevices?.addEventListener?.("devicechange", () => { if (voice.stream) fillMics(); fillCams(); });
+$("#camAllow").onclick = async () => {
+  try { (await navigator.mediaDevices.getUserMedia({ video: true })).getTracks().forEach((x) => x.stop()); }
+  catch (e) { nlog(`Kamera hatası: ${e.name} ${e.message}`); return toast(CAM_ERR[e.name] ? t(CAM_ERR[e.name]) : t("Couldn't open camera ({0})", e.name)); }
+  fillCams();
+};
 
 async function joinVoice(ch) {
   if (voice.ch === ch) return;
@@ -1605,9 +1629,14 @@ async function openCam() {
 async function fillCams() {
   const cams = await listCams();
   const cur = voice.cam?.getVideoTracks()[0]?.getSettings().deviceId || store.get("lonca_cam", "");
-  $("#camSel").innerHTML = cams.map((d, i) =>
-    `<option value="${esc(d.deviceId)}" ${d.deviceId === cur ? "selected" : ""}>📷 ${esc(d.label || t("Camera") + " " + (i + 1))}</option>`).join("");
+  $("#camSel").innerHTML = cams.map((d, i) => {
+    // İki iPhone aynı adla gelebiliyor, listede ayrılsınlar
+    const same = cams.slice(0, i).filter((x) => x.label === d.label).length;
+    return `<option value="${esc(d.deviceId)}" ${d.deviceId === cur ? "selected" : ""}>📷 ${esc((d.label || t("Camera") + " " + (i + 1)) + (d.label && same ? ` (${same + 1})` : ""))}</option>`;
+  }).join("");
   $("#camSel").closest("label").classList.toggle("hidden", !cams.length);
+  // Tarayıcı, izin verilmeden kamera adlarını söylemiyor
+  $("#camAllow").classList.toggle("hidden", cams.some((d) => d.label));
   return cams;
 }
 function useCam(s) {
@@ -1813,9 +1842,11 @@ function render() {
   // Üyeler
   const online = readyPeers();
   const textOnly = relayOnlyList();
-  let mem = `<div class="cat">${t("Online — {0}", online.length + textOnly.length + 1)}</div>`;
+  // Bağlantısı olup adını girmemiş (giriş ekranındaki) kişi listede görünmez
+  const entered = online.filter((p) => p.state.name);
+  let mem = `<div class="cat">${t("Online — {0}", entered.length + textOnly.length + 1)}</div>`;
   mem += member(t("{0} (you)", me.name), me.color, voice.ch);
-  for (const p of online) mem += member(p.state.name || t("Connecting…"), p.state.color, p.state.voice, p.id);
+  for (const p of entered) mem += member(p.state.name, p.state.color, p.state.voice, p.id);
   for (const [uid, r] of textOnly) {
     mem += `<div class="mem" title="${t("Direct connection failed; messages go through a relay, no voice or screen")}">${avatar(r.name, r.color, "md", "", avOf(uid))}` +
       `<div style="min-width:0"><div class="nm">${esc(r.name)}</div><small>${t("📨 text only")}</small></div></div>`;
@@ -2483,7 +2514,32 @@ addEventListener("online", () => { lastHello = 0; hello(); });
 addEventListener("hashchange", () => location.reload());
 
 // ---------- Açılış ----------
-const linkHash = (s) => `k=${s.key}&n=${encodeURIComponent(s.name)}`;
+const linkHash = (s) => `k=${s.key}&n=${encodeURIComponent(s.name)}${s.check ? "&p=" + s.check : ""}`;
+// Şifre anahtarın parçası: bilmeyen, linki olsa bile odayı bulamaz ve mesajları çözemez
+async function passSecret(key, pass) {
+  const base = await crypto.subtle.importKey("raw", new TextEncoder().encode(pass), "PBKDF2", false, ["deriveBits"]);
+  const bits = await crypto.subtle.deriveBits({ name: "PBKDF2", hash: "SHA-256", salt: new TextEncoder().encode("lonca:" + key), iterations: 200000 }, base, 256);
+  return hex(new Uint8Array(bits));
+}
+// Linkteki p= yalnız yanlış şifreyi hemen söylemek için; şifrenin kendisi linke girmez
+const passCheck = async (secret) => hex(await sha("check:" + secret)).slice(0, 16);
+function askPass(key, name, check) {
+  $("#passName").textContent = name;
+  $("#passOver").classList.remove("hidden");
+  $("#passIn").focus();
+  return new Promise((done) => {
+    $("#passOver form").onsubmit = async (e) => {
+      e.preventDefault();
+      const secret = await passSecret(key, $("#passIn").value);
+      if (await passCheck(secret) !== check) {
+        $("#passErr").classList.remove("hidden");
+        return $("#passIn").select();
+      }
+      $("#passOver").classList.add("hidden");
+      done(secret);
+    };
+  });
+}
 function showLanding() {
   $("#landing").classList.remove("hidden");
   const list = store.get("lonca_servers", []);
@@ -2500,9 +2556,12 @@ function showLanding() {
     const s = list.find((x) => x.key === e.target.dataset.srv);
     if (s) location.hash = linkHash(s);
   };
-  $("#createSrv").onclick = () => {
-    const name = $("#newSrvName").value.trim().slice(0, 32) || "Lonca";
-    location.hash = linkHash({ key: rid(22), name });
+  $("#createSrv").onclick = async () => {
+    const name = $("#newSrvName").value.trim().slice(0, 32) || "Lonca", key = rid(22), pass = $("#newSrvPass").value;
+    if (!pass) return void (location.hash = linkHash({ key, name }));
+    const secret = await passSecret(key, pass), check = await passCheck(secret);
+    store.set("lonca_servers", [...store.get("lonca_servers", []), { key, name, check, secret }]);
+    location.hash = linkHash({ key, name, check });
   };
 }
 // Önbellekten eski sürüm geldiyse yenisini farklı adresle (?v=) aç
@@ -2527,13 +2586,20 @@ async function boot() {
   const p = new URLSearchParams(location.hash.slice(1));
   const key = p.get("k");
   if (!key || !/^[a-z0-9]{16,64}$/.test(key)) return showLanding();
-  room = {
-    key, name: (p.get("n") || "Lonca").slice(0, 32),
-    topic: "lonca-" + hex(await sha("topic:" + key)).slice(0, 32),
-    aes: await crypto.subtle.importKey("raw", await sha("aes:" + key), "AES-GCM", false, ["encrypt", "decrypt"]),
-  };
+  const name = (p.get("n") || "Lonca").slice(0, 32);
+  const check = /^[0-9a-f]{16}$/.test(p.get("p") || "") ? p.get("p") : "";
   const list = store.get("lonca_servers", []);
-  if (!list.some((s) => s.key === key)) store.set("lonca_servers", [...list, { key, name: room.name }]);
+  const known = list.find((s) => s.key === key);
+  let secret = "";
+  if (check) secret = known?.secret && await passCheck(known.secret) === check ? known.secret : await askPass(key, name, check);
+  const seed = secret ? key + ":" + secret : key;
+  room = {
+    key, name, check,
+    topic: "lonca-" + hex(await sha("topic:" + seed)).slice(0, 32),
+    aes: await crypto.subtle.importKey("raw", await sha("aes:" + seed), "AES-GCM", false, ["encrypt", "decrypt"]),
+  };
+  if (!known) store.set("lonca_servers", [...list, { key, name, ...(check && { check, secret }) }]);
+  else if (check && known.secret !== secret) store.set("lonca_servers", list.map((s) => (s === known ? { ...s, check, secret } : s)));
   lastSeen = store.get("lonca_seen_" + room.topic, {});
 
   const saved = await dbDo("msgs", "readonly", (s) => s.index("room").getAll(room.topic));
