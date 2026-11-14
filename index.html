@@ -464,7 +464,7 @@ label{font-size:13px;color:var(--dim);display:flex;flex-direction:column;gap:6px
 // Asıl trafik (yazı, ses, ekran, dosya): tarayıcılar arası WebRTC, herkes herkese bağlı (mesh).
 
 // Her yayında artır: açık sayfalar yeni sürümü görüp kendini yeniler (GitHub Pages 10 dk önbellekliyor)
-const VERSION = "22";
+const VERSION = "23";
 const RELAY = "https://ntfy.sh/";
 const STUN = [{ urls: ["stun:stun.l.google.com:19302", "stun:stun.cloudflare.com:3478"] }];
 const DEFAULT_TEXT = ["genel", "oyun", "medya"];
@@ -550,7 +550,7 @@ const TR = {
   "Video sound isn't being sent with this share. If you need it, pick Tab and turn on its audio": "Bu paylaşımda video sesi gitmiyor. Ses gerekiyorsa Sekme'yi seçip sesini aç",
   "Camera permission is off. Allow it from the icon in the address bar, or enable your browser in your system's camera privacy settings": "Kamera izni kapalı. Adres çubuğundaki simgeden izin ver; olmazsa Mac'te Sistem Ayarları > Gizlilik ve Güvenlik > Kamera'dan Chrome'u aç",
   "Couldn't start the camera. Another app may be using it; close it and try again": "Kamera başlatılamadı. Başka bir uygulama kullanıyor olabilir, onu kapatıp tekrar dene",
-  "No camera found": "Kamera bulunamadı",
+  "No camera found. If your laptop lid is closed, open it. To use an iPhone as the camera, lock it and stand it in landscape near your Mac": "Kamera bulunamadı. Dizüstünün kapağı kapalıysa aç. iPhone'u kamera yapmak için kilitle ve Mac'in yanına yatay koy",
   "Couldn't open camera ({0})": "Kamera açılamadı ({0})",
   "iPhone camera couldn't be opened, this camera was used instead. Check that your iPhone is unlocked": "iPhone kamerası açılamadı, bu kamera açıldı. iPhone'un kilidini kontrol et",
   "Text channels": "Yazı kanalları",
@@ -1598,7 +1598,7 @@ function stopScreen(push = true) {
 const CAM_ERR = {
   NotAllowedError: "Camera permission is off. Allow it from the icon in the address bar, or enable your browser in your system's camera privacy settings",
   NotReadableError: "Couldn't start the camera. Another app may be using it; close it and try again",
-  NotFoundError: "No camera found",
+  NotFoundError: "No camera found. If your laptop lid is closed, open it. To use an iPhone as the camera, lock it and stand it in landscape near your Mac",
 };
 const CAM_OPTS = { width: { ideal: 640 }, height: { ideal: 360 }, frameRate: { ideal: 24 } };
 const openCamId = (id) => navigator.mediaDevices.getUserMedia({ video: id ? { ...CAM_OPTS, deviceId: { exact: id } } : CAM_OPTS });
